@@ -1512,40 +1512,10 @@
                                 
                                 composerBlending.addPass( blendPassObjects );
                                 composerBlending.addPass( copyPassBlend );
-                                //composerBlending.addPass( fxaaPass );
-                                
-                                // Effect processing
-//                                var composerEffect = new THREE.EffectComposer( renderer, renderTargetDOF );
-//                                var dofPass = new THREE.ShaderPass(THREE.BokehShader);
-//                                var ssaoPass = new THREE.ShaderPass(THREE.SSAOShader);
-//                                var copyPass = new THREE.ShaderPass(THREE.CopyShader);
-//                                var copyPass2 = new THREE.ShaderPass(THREE.CopyShader);
-//                                copyPass.renderToScreen = true;
-                                //copyPass.tDiffuse = renderTargetBlend;
-                                //ssaoPass.uniforms.tDepth.value = renderTargetObjects;
-//                                ssaoPass.uniforms.size.value = new THREE.Vector2( 1024, 1024 );
-//                                ssaoPass.uniforms.cameraNear.value = camera.near;
-//                                ssaoPass.uniforms.cameraFar.value = camera.far;
-//                                ssaoPass.uniforms.onlyAO.value = 1;
-//                                ssaoPass.uniforms.aoClamp.value = 0.5;
-//                                ssaoPass.uniforms.lumInfluence.value = 0.5;
-//                                dofPass.uniforms.tDepth.value = renderTargetObjects;
-//                                dofPass.uniforms.focus.value = 1.0;
-//                                dofPass.uniforms.aspect.value = 1.0;
-//                                dofPass.uniforms.aperture.value = .0025;
-//                                dofPass.uniforms.maxblur.value = 1.0;
-//                                fxaaPass.uniforms.tDiffuse.value = composerObjects.renderTarget1;
 
-                                //
-                                //composerEffect.addPass(copyPass2);
-                                //composerEffect.addPass(dofPass);
-                                //composerEffect.addPass(fxaaPass);
-                                //composerEffect.addPass(ssaoPass);
-                                //composerEffect.addPass(copyPass);
 				postprocessing.composerBillboards = composerBillboards;
                                 postprocessing.composerObjects = composerObjects;
                                 postprocessing.composerBlending = composerBlending;
-                                //postprocessing.composerDOF = composerEffect;                                
                                 // STATS
                                 glS = new glStats();
                                 tS = new threeStats( renderer );
@@ -2253,7 +2223,6 @@
                                     postprocessing.composerBillboards.render( 0.1 );
                                     postprocessing.composerObjects.render( 0.1 );
                                     postprocessing.composerBlending.render ( 0.1 );
-                                    //postprocessing.composerDOF.render( 0.1 );
                                 }
                                 else{
                                     renderer.render( scene2, camera);
