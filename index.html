@@ -117,7 +117,6 @@
                         var nTextures = [3, 4, 1, 3, 3, 4, 1];
                         var plantColorsLOD = [new THREE.Vector3(80/255,131/255,88/255), new THREE.Vector3(56/255,115/255,37/255), new THREE.Vector3(98/255,164/255,90/255),new THREE.Vector3(183/255,193/255,181/255),new THREE.Vector3(185/255,112/255,159/255),new THREE.Vector3(173/255,236/255,225/255),new THREE.Vector3(1,1,1)];
                         
-                        var onlineVersion = 2.0;
                         var terrainmesh;
                         var heightImageLink1, heightImageLink2;
                         var mudImageLink, grassImageLink, waterImageLink;
@@ -209,167 +208,59 @@
                                 0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier];
                         }
                         
-                        if(onlineVersion === 0){
-                            heightImageLink1 = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/heightMap_Paulinapolder.png";
-                            heightImageLink2 = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/heightMap_Paulinapolder_v2.png";
-                            
-                            mudImageLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/mudTilingColor.png';
-                            grassImageLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/grassTilingColor.png';                            
-                            mudNormalLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/mudNormals.png';
-                            skyBoxImagePath = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/skybox/';
-                            
-                            locationsTextLink = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/locations.txt";
-                            
-                            if(quality === 0.0){
-                                locationsTextLink = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/locations.txt";
-                            }
-                            else if(quality === 1.0){
-                                locationsTextLink = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/locations_08.txt";
-                            }
-                            else if(quality === 2.0){
-                                locationsTextLink = "data/locations_16.txt";
-                            }
-                            
-                            modelElymusObjLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Elymus.obj';
-                            modelElymusMtlLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Elymus.mtl';
-                            modelSpartinaObjLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Spartina.obj';
-                            modelSpartinaMtlLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Spartina.mtl';
-                            modelAtriplexObjLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Atriplex.obj';
-                            modelAtriplexMtlLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Atriplex.mtl';
-                            modelAsterObjLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Aster.obj';
-                            modelAsterMtlLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Aster.mtl';
-                            modelLimoniumObjLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Limonium.obj';
-                            modelLimoniumMtlLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Limonium.mtl';
-                            modelArtemisiaObjLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Artemisia.obj';
-                            modelArtemisiaMtlLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Artemisia.mtl';
-                            modelSalicorniaObjLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Salicornia.obj';
-                            modelSalicorniaMtlLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Salicornia.mtl';
-                            
-                            texturesElymusLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Textures/ElymusMap.png';
-                            texturesSpartinaLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Textures/SpartinaMap.png';
-                            texturesAtriplexLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Textures/AtriplexMap.png';
-                            texturesAsterLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Textures/AsterMap.png';
-                            texturesArtemisiaLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Textures/ArtemisiaMap.png';
-                            texturesLimoniumLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Textures/LimoniumMap.png';
-                            texturesSalicorniaLink = 'https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Textures/SalicorniaMap.png';
-                            
-                            billboardsLink = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Billboards/cubeTextureAtlas.png";
-                            billboardTextureMapLink = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Billboards/Billboards_Mipmap_4096_Repetition.tga";
-                            dikeModelObjLink = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/dijk.obj";
-                            dikeModelTextureLink = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Models/Textures/dykeTilingColor.png";
-                            dikeGrassTextureLink = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/dikegrass.png";
-                            farawayTextureMapLink = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/Billboards/Billboards_Mipmap_1024_background.tga";
-                            waveNormalLink = "https://dl.dropboxusercontent.com/u/46201994/ThreeJS/Assets/waternormals.jpg";
-                        }
-                        else if (onlineVersion === 1.0){
-                            heightImageLink1 = "Assets/heightMap_Paulinapolder.png";
-                            heightImageLink2 = "Assets/heightMap_Paulinapolder_v2.png";
-                            
-                            mudImageLink = 'Assets/mudTilingColor.png';
-                            grassImageLink = 'Assets/grassTilingColor.png';                            
-                            mudNormalLink = 'Assets/mudNormals.png';
-                            skyBoxImagePath = 'Assets/skybox/';
-                            
-                            locationsTextLink = "Assets/locations.txt";
-                            
-                            if(quality === 0.0){
-                                locationsTextLink = "Assets/locations.txt";
-                            }
-                            else if(quality === 1.0){
-                                locationsTextLink = "Assets/locations_08.txt";
-                            }
-                            else if(quality === 2.0){
-                                locationsTextLink = "Assets/locations_16.txt";
-                            }
-                            
-                            modelElymusObjLink = 'Assets/Models/Elymus.obj';
-                            modelElymusMtlLink = 'Assets/Models/Elymus.mtl';
-                            modelSpartinaObjLink = 'Assets/Models/Spartina.obj';
-                            modelSpartinaMtlLink = 'Assets/Models/Spartina.mtl';
-                            modelAtriplexObjLink = 'Assets/Models/Atriplex.obj';
-                            modelAtriplexMtlLink = 'Assets/Models/Atriplex.mtl';
-                            modelAsterObjLink = 'Assets/Models/Aster.obj';
-                            modelAsterMtlLink = 'Assets/Models/Aster.mtl';
-                            modelLimoniumObjLink = 'Assets/Models/Limonium.obj';
-                            modelLimoniumMtlLink = 'Assets/Models/Limonium.mtl';
-                            modelArtemisiaObjLink = 'Assets/Models/Artemisia.obj';
-                            modelArtemisiaMtlLink = 'Assets/Models/Artemisia.mtl';
-                            modelSalicorniaObjLink = 'Assets/Models/Salicornia.obj';
-                            modelSalicorniaMtlLink = 'Assets/Models/Salicornia.mtl';
-                            
-                            texturesElymusLink = 'Assets/Models/Textures/ElymusMap.png';
-                            texturesSpartinaLink = 'Assets/Models/Textures/SpartinaMap.png';
-                            texturesAtriplexLink = 'Assets/Models/Textures/AtriplexMap.png';
-                            texturesAsterLink = 'Assets/Models/Textures/AsterMap.png';
-                            texturesArtemisiaLink = 'Assets/Models/Textures/ArtemisiaMap.png';
-                            texturesLimoniumLink = 'Assets/Models/Textures/LimoniumMap.png';
-                            texturesSalicorniaLink = 'Assets/Models/Textures/SalicorniaMap.png';
-                            
-                            billboardsLink = "Assets/Billboards/cubeTextureAtlas.png";
-                            billboardTextureMapLink = "Assets/Billboards/Billboards_Mipmap_4096_Repetition.tga";
-                            dikeModelObjLink = "Assets/Models/dijk.obj";
-                            dikeModelTextureLink = "Assets/Models/Textures/dykeTilingColor.png";
-                            dikeGrassTextureLink = "Assets/dikegrass.png";
-                            
-                            farawayTextureMapLink = "Assets/Billboards/Billboards_Mipmap_1024_background.tga";
-                            waveNormalLink = "Assets/waternormals.jpg";
-                        }
-                        else{
-                            heightImageLink1 = "images/heightMap_Paulinapolder.png";
-                            heightImageLink2 = "images/heightMap_Paulinapolder_v2.png";
-                            
-                            mudImageLink = 'images/mudTilingColor.png';
-                            grassImageLink = 'images/grassTilingColor.png';
-                            grassImageLink2 = 'images/grasslight-big.jpg';
-                            
-                            mudNormalLink = 'images/mudNormals.png'
-                            skyBoxImagePath = 'images/skybox/';
-                            
-                            if(quality === 0.0){
-                                locationsTextLink = "data/locations.txt";
-                            }
-                            else if(quality === 1.0){
-                                locationsTextLink = "data/locations_08.txt";
-                            }
-                            else if(quality === 2.0){
-                                locationsTextLink = "data/locations_16.txt";
-                            }
-                            
-                            modelElymusObjLink = 'Models/Elymus.obj';
-                            modelElymusMtlLink = 'Models/Elymus.mtl';
-                            modelSpartinaObjLink = 'Models/Spartina.obj';
-                            modelSpartinaMtlLink = 'Models/Spartina.mtl';
-                            modelAtriplexObjLink = 'Models/Atriplex.obj';
-                            modelAtriplexMtlLink = 'Models/Atriplex.mtl';
-                            modelAsterObjLink = 'Models/Aster.obj';
-                            modelAsterMtlLink = 'Models/Aster.mtl';
-                            modelLimoniumObjLink = 'Models/Limonium.obj';
-                            modelLimoniumMtlLink = 'Models/Limonium.mtl';
-                            modelArtemisiaObjLink = 'Models/Artemisia.obj';
-                            modelArtemisiaMtlLink = 'Models/Artemisia.mtl';
-                            modelSalicorniaObjLink = 'Models/Salicornia.obj';
-                            modelSalicorniaMtlLink = 'Models/Salicornia.mtl';
-                            
-                            texturesElymusLink = 'Models/Textures/ElymusMap.png';
-                            texturesSpartinaLink = 'Models/Textures/SpartinaMap.png';
-                            texturesAtriplexLink = 'Models/Textures/AtriplexMap.png';
-                            texturesAsterLink = 'Models/Textures/AsterMap.png';
-                            texturesArtemisiaLink = 'Models/Textures/ArtemisiaMap.png';
-                            texturesLimoniumLink = 'Models/Textures/LimoniumMap.png';
-                            texturesSalicorniaLink = 'Models/Textures/SalicorniaMap.png';
-                            
-                            billboardsLink = "Billboards/cubeTextureAtlas.png";
-                            billboardTextureMapLink = "Billboards/Billboards_Mipmap_1024.tga";
-                            billboardTextureMapLink = "Billboards/Billboards_Mipmap_2048.tga";
-                            billboardTextureMapLink = "Billboards/Billboards_Mipmap_4096.tga";
-                            billboardTextureMapLink = "Billboards/Billboards_Mipmap_4096_Repetition.tga";
-                            farawayTextureMapLink = "Billboards/Billboards_Mipmap_1024_background.tga";
-                            dikeModelObjLink = "Models/dijk.obj";
-                            dikeModelTextureLink = "Models/Textures/dykeTilingColor.png";
-                            dikeGrassTextureLink = "images/dikegrass.png";
-                            waveNormalLink = "images/waternormals.jpg";
+                        heightImageLink1 = "images/heightMap_Paulinapolder.png";
+                        heightImageLink2 = "images/heightMap_Paulinapolder_v2.png";
 
+                        mudImageLink = 'images/mudTilingColor.png';
+                        grassImageLink = 'images/grassTilingColor.png';
+                        grassImageLink2 = 'images/grasslight-big.jpg';
+
+                        mudNormalLink = 'images/mudNormals.png'
+                        skyBoxImagePath = 'images/skybox/';
+
+                        if(quality === 0.0){
+                            locationsTextLink = "data/locations.txt";
                         }
+                        else if(quality === 1.0){
+                            locationsTextLink = "data/locations_08.txt";
+                        }
+                        else if(quality === 2.0){
+                            locationsTextLink = "data/locations_16.txt";
+                        }
+
+                        modelElymusObjLink = 'Models/Elymus.obj';
+                        modelElymusMtlLink = 'Models/Elymus.mtl';
+                        modelSpartinaObjLink = 'Models/Spartina.obj';
+                        modelSpartinaMtlLink = 'Models/Spartina.mtl';
+                        modelAtriplexObjLink = 'Models/Atriplex.obj';
+                        modelAtriplexMtlLink = 'Models/Atriplex.mtl';
+                        modelAsterObjLink = 'Models/Aster.obj';
+                        modelAsterMtlLink = 'Models/Aster.mtl';
+                        modelLimoniumObjLink = 'Models/Limonium.obj';
+                        modelLimoniumMtlLink = 'Models/Limonium.mtl';
+                        modelArtemisiaObjLink = 'Models/Artemisia.obj';
+                        modelArtemisiaMtlLink = 'Models/Artemisia.mtl';
+                        modelSalicorniaObjLink = 'Models/Salicornia.obj';
+                        modelSalicorniaMtlLink = 'Models/Salicornia.mtl';
+
+                        texturesElymusLink = 'Models/Textures/ElymusMap.png';
+                        texturesSpartinaLink = 'Models/Textures/SpartinaMap.png';
+                        texturesAtriplexLink = 'Models/Textures/AtriplexMap.png';
+                        texturesAsterLink = 'Models/Textures/AsterMap.png';
+                        texturesArtemisiaLink = 'Models/Textures/ArtemisiaMap.png';
+                        texturesLimoniumLink = 'Models/Textures/LimoniumMap.png';
+                        texturesSalicorniaLink = 'Models/Textures/SalicorniaMap.png';
+
+                        billboardsLink = "Billboards/cubeTextureAtlas.png";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_1024.tga";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_2048.tga";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_4096.tga";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_4096_Repetition.tga";
+                        farawayTextureMapLink = "Billboards/Billboards_Mipmap_1024_background.tga";
+                        dikeModelObjLink = "Models/dijk.obj";
+                        dikeModelTextureLink = "Models/Textures/dykeTilingColor.png";
+                        dikeGrassTextureLink = "images/dikegrass.png";
+                        waveNormalLink = "images/waternormals.jpg";
                                                 
                         preloadimages([heightImageLink1,heightImageLink2]).done(function(loadedImages){
                             images = loadedImages;
