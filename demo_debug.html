@@ -1,0 +1,2269 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>WebGL/three.js - 3D natural environments</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #fff;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+
+				background-color: #050505;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+
+			a {
+
+				color: #0080ff;
+			}
+
+		</style>
+	</head>
+	<body>
+
+		<div id="container"></div>
+		<div id="info"> WebGL/three.js - 3D natural environments <br />(wasd+arrows: movement, p: toggle billboards, c: toggle plant models, b: toggle terrain, u: toggle LOD, k: toggle water, m: toggle shadows)</div>
+		<script src="build/three_r69.js"></script>
+                <script src="build/rStats.js"></script>
+                <script src="build/rStats.extras.js"></script>
+                
+                <script src="ShaderLibrary.js"></script>
+		<script src="js/controls/FirstPersonControls.js"></script>
+                <script src="js/controls/FlyControls.js"></script>
+                <script src="js/controls/TrackballControls.js"></script>
+                <script src="js/controls/OrbitControls.js"></script>
+                <script src="js/loaders/OBJMTLLoader.js"></script>
+                <script src="js/loaders/OBJLoader.js"></script>
+                <script src="js/loaders/MTLLoader.js"></script>
+                <script src="js/Mirror.js"></script>
+		<script src="js/WaterShader_new.js"></script>
+                <script src="js/shaders/FresnelShader_new.js"></script>
+                <script src="js/loaders/TGALoader.js"></script>
+
+                
+                <script src="js/shaders/CopyShader.js"></script>
+		<script src="js/shaders/BokehShader.js"></script>
+                <script src="js/shaders/BlendShader.js"></script>
+                <script src="js/shaders/SSAOShader.js"></script>
+                <script src="js/shaders/FXAAShader.js"></script>
+                <script src="js/shaders/ParallaxShader.js"></script>
+                <script src="js/shaders/ColorCorrectionShader.js"></script>
+                <script src="js/SkyShader.js"></script>
+
+		<script src="js/postprocessing/EffectComposer.js"></script>
+		<script src="js/postprocessing/RenderPass.js"></script>
+                <script src="js/postprocessing/BloomPass.js"></script> 
+		<script src="js/postprocessing/ShaderPass.js"></script>
+		<script src="js/postprocessing/MaskPass.js"></script>
+                <script src="js/postprocessing/DotScreenPass.js"></script> 
+		<script src="js/postprocessing/BokehPass.js"></script>
+                <script src="js/shaders/DotScreenShader.js"></script>
+                <script src="js/shaders/BlendAdvancedShader.js"></script>
+
+		<script src="js/Detector.js"></script>
+		<script>
+
+			if ( ! Detector.webgl ) {
+
+				Detector.addGetWebGLMessage();
+				document.getElementById( 'container' ).innerHTML = "";
+
+			}
+			var container, stats, scene2, scene3, renderStats;
+
+			var camera, controls, scene, renderer;
+                        
+                        var renderTargetObjects, renderTargetBillboards, renderTargetTerrain;
+
+			var worldWidth, worldDepth, worldHalfWidth, worldHalfDepth;
+                        var dirLight, hemiLight;
+
+			var clock = new THREE.Clock();
+                        var pNumber = 0;
+                                                
+                        var billboards, objects, terrains, terrainObjects, plantModels;
+                        var plantModelMaterials = [];
+
+                        var limonium, spartina;
+                        var scale = 2;
+                        var heightScale = 4;
+                        var group, images;
+                        var frustum = new THREE.Frustum();
+                        var billboardsVisible = true;
+                        var objectsVisible = false;
+                        var terrainsVisible = true;
+                        var linesLODVisible = false;
+                        var plantVisible = true;
+                        var waterVisible = true;
+                        var threshT = [];
+                        var threshT2 = [];
+                        var overlayStatus = false;
+                        var overlayFactor = 0.0;
+                        
+                        var plantTypes = ["Elymus", "Spartina", "Atriplex", "Aster", "Limonium" ,"Artemisia", "Salicornia"];
+                        var plantBillboardScales = [0,0,0,0,0,0,0];
+                        var plantBillboardSizes = [1000,1000,430,600,270,550,250];
+                        //var plantModelSizes = [0.3*scale,0.3*scale,0.2*scale,0.23*scale,0.15*scale,0.3*scale,0.3*scale];
+                        var nTextures = [3, 4, 1, 3, 3, 4, 1];
+                        var plantColorsLOD = [new THREE.Vector3(80/255,131/255,88/255), new THREE.Vector3(56/255,115/255,37/255), new THREE.Vector3(98/255,164/255,90/255),new THREE.Vector3(183/255,193/255,181/255),new THREE.Vector3(185/255,112/255,159/255),new THREE.Vector3(173/255,236/255,225/255),new THREE.Vector3(1,1,1)];
+                        
+                        var terrainmesh;
+                        var heightImageLink1, heightImageLink2;
+                        var mudImageLink, grassImageLink, waterImageLink;
+                        var locationsTextLink;
+                        var modelGeometryLink,modelMaterialLink,modelSpartinaObjLink, modelSpartinaMatLink;
+                        var materialLines = new THREE.LineBasicMaterial({ color: "red" });
+                        var offsetFrustum = 0;
+                        var billboardsLink;
+                        
+                        var children = [];
+                        var childrenNew = [];
+                        var offsetTransition = 1.0;
+                        
+                        var levelsLOD = 6;
+                        var levelLODselected = 0;
+                        var offsetLOD = .5;
+                        var locations;
+                        var centerTerrains = [];
+                        var terrainBoxes = [];
+                        var transitionLength = 1.0;
+                        
+                        var postprocessing = {};
+                        var BLENDING_MODE = true;
+                        
+                        var thresholdNear;
+                        var thresholdFar;
+                        var transitionZone = scale * 12.0;
+                        var sky;
+                        var dike;
+                        var speed = 0.5 * scale;
+                        var lookat = false;
+                        
+                        var fps = 10;
+                        var now;
+                        var then = Date.now();
+                        var interval = 1000/fps;
+                        var delta;
+                        
+                        var distT, bboxT, dist, frustT, distT2, objectRange, billboardRange;
+                        var objectBox = new THREE.Box2();
+                        var billboardBox = new THREE.Box2();
+                        var camPos = new THREE.Vector2(0.0,0.0);
+                        var maxDist;
+                        var maxDistBillboard;
+                        var transitionZoneBillboards = 35 * scale;
+                        var offsetLODTerrain = 0.3;
+                        var worldCoordinates;
+                        var time = 0.0;
+                        
+                        var quality = 0.0;
+                        var qualityMultiplier;
+                        var thresholdBillboard;
+                        var billboardSizeMultiplier;
+                        var heightScale;
+                        var plantModelSizes;
+                        var offsetDist;
+                        var resolution;
+                        if (quality === 0){ // HIGH Quality
+                            resolution = 1.0;
+                            qualityMultiplier = 1.0;
+                            billboardSizeMultiplier = 6;
+                            thresholdBillboard = 250 * scale;
+                            heightScale = 4;
+                            offsetDist = .3;
+                            plantModelSizes = [0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier,
+                                0.2*scale*qualityMultiplier,0.23*scale*qualityMultiplier,0.15*scale*qualityMultiplier,
+                                0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier];
+                        }
+                        else if(quality === 1){ //MEDIUM Quality
+                            resolution = 1.5;
+                            qualityMultiplier = 1.7;
+                            billboardSizeMultiplier = 6 * qualityMultiplier;
+                            thresholdBillboard = 125 * scale;
+                            heightScale = 4;
+                            offsetDist = .6;
+                            plantModelSizes = [0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier,
+                                0.2*scale*qualityMultiplier,0.23*scale*qualityMultiplier,0.15*scale*qualityMultiplier,
+                                0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier];
+                        }
+                        else if(quality === 2){ // LOW Quality
+                            resolution = 2.0;
+                            qualityMultiplier = 2.0;
+                            billboardSizeMultiplier = 6 * qualityMultiplier;
+                            thresholdBillboard = 100 * scale;
+                            heightScale = 4 * qualityMultiplier;
+                            offsetDist = .9;
+                            plantModelSizes = [0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier,
+                                0.2*scale*qualityMultiplier,0.23*scale*qualityMultiplier,0.15*scale*qualityMultiplier,
+                                0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier];
+                        }
+                        
+                        heightImageLink1 = "images/heightMap_Paulinapolder.png";
+                        heightImageLink2 = "images/heightMap_Paulinapolder_v2.png";
+
+                        mudImageLink = 'images/mudTilingColor.png';
+                        grassImageLink = 'images/grassTilingColor.png';
+                        grassImageLink2 = 'images/grasslight-big.jpg';
+
+                        mudNormalLink = 'images/mudNormals.png'
+                        skyBoxImagePath = 'images/skybox/';
+
+                        if(quality === 0.0){
+                            locationsTextLink = "data/locations.txt";
+                        }
+                        else if(quality === 1.0){
+                            locationsTextLink = "data/locations_08.txt";
+                        }
+                        else if(quality === 2.0){
+                            locationsTextLink = "data/locations_16.txt";
+                        }
+
+                        modelElymusObjLink = 'Models/Elymus.obj';
+                        modelElymusMtlLink = 'Models/Elymus.mtl';
+                        modelSpartinaObjLink = 'Models/Spartina.obj';
+                        modelSpartinaMtlLink = 'Models/Spartina.mtl';
+                        modelAtriplexObjLink = 'Models/Atriplex.obj';
+                        modelAtriplexMtlLink = 'Models/Atriplex.mtl';
+                        modelAsterObjLink = 'Models/Aster.obj';
+                        modelAsterMtlLink = 'Models/Aster.mtl';
+                        modelLimoniumObjLink = 'Models/Limonium.obj';
+                        modelLimoniumMtlLink = 'Models/Limonium.mtl';
+                        modelArtemisiaObjLink = 'Models/Artemisia.obj';
+                        modelArtemisiaMtlLink = 'Models/Artemisia.mtl';
+                        modelSalicorniaObjLink = 'Models/Salicornia.obj';
+                        modelSalicorniaMtlLink = 'Models/Salicornia.mtl';
+
+                        texturesElymusLink = 'Models/Textures/ElymusMap.png';
+                        texturesSpartinaLink = 'Models/Textures/SpartinaMap.png';
+                        texturesAtriplexLink = 'Models/Textures/AtriplexMap.png';
+                        texturesAsterLink = 'Models/Textures/AsterMap.png';
+                        texturesArtemisiaLink = 'Models/Textures/ArtemisiaMap.png';
+                        texturesLimoniumLink = 'Models/Textures/LimoniumMap.png';
+                        texturesSalicorniaLink = 'Models/Textures/SalicorniaMap.png';
+
+                        billboardsLink = "Billboards/cubeTextureAtlas.png";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_1024.tga";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_2048.tga";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_4096.tga";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_4096_Repetition.tga";
+                        farawayTextureMapLink = "Billboards/Billboards_Mipmap_1024_background.tga";
+                        dikeModelObjLink = "Models/dijk.obj";
+                        dikeModelTextureLink = "Models/Textures/dykeTilingColor.png";
+                        dikeGrassTextureLink = "images/dikegrass.png";
+                        waveNormalLink = "images/waternormals.jpg";
+                                                
+                        preloadimages([heightImageLink1,heightImageLink2]).done(function(loadedImages){
+                            images = loadedImages;
+                            preLoadPlantModel([modelElymusObjLink,modelElymusMtlLink, modelSpartinaObjLink,modelSpartinaMtlLink, modelAtriplexObjLink,modelAtriplexMtlLink, modelAsterObjLink,modelAsterMtlLink, modelLimoniumObjLink,modelLimoniumMtlLink, modelArtemisiaObjLink,modelArtemisiaMtlLink, modelSalicorniaObjLink,modelSalicorniaMtlLink]).done(function(loadedModels){
+                                plantModels = loadedModels;
+                                preLoadLocations(locationsTextLink).done(function(loadedLocations){
+                                    locations = loadedLocations;
+                                    preLoadDike(dikeModelObjLink).done(function(loadedDike){
+                                        dike = loadedDike;
+                                        init();
+                                        animate();
+                                    });
+                                });
+                            });
+                        });
+
+			function init() {
+                            
+				container = document.getElementById( 'container' );
+                                
+                                camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, .06 * scale, scale * 680 );
+                                camera.position.y = scale*(heightScale+2);
+                                camera.position.x = -105 * scale;
+                                camera.position.z = -125 * scale;
+                                camera.rotation.x += 0;
+                                camera.rotation.y += 180;
+                                camera.rotation.z += 0;
+                                
+                                controls = new THREE.FlyControls( camera );
+
+				controls.movementSpeed = speed;
+				controls.domElement = container;
+				controls.rollSpeed = (Math.PI / 240) * (1 / scale);
+				controls.autoForward = false;
+				controls.dragToLook = true;
+				scene = new THREE.Scene();
+                                scene2 = new THREE.Scene();
+                                scene3 = new THREE.Scene();
+                                
+                                renderer = new THREE.WebGLRenderer({ antialias: true,logarithmicDepthBuffer: false });
+                                var windowWidth = window.innerWidth / resolution;
+                                var windowHeight = window.innerHeight / resolution;
+                                var pixelRatio = window.devicePixelRatio;
+                                renderer.setSize( windowWidth, windowHeight );        
+                                //renderer.setViewport( 0, 0, windowWidth*pixelRatio, windowHeight*pixelRatio );
+				container.appendChild( renderer.domElement );
+                                renderer.gammaInput = true;
+				renderer.gammaOutput = true;
+                                renderer.autoClear = false;
+                                renderer.shadowMapEnabled = true;
+				renderer.shadowMapType = THREE.PCFSoftShadowMap;
+                                //renderer.shadowMapType = THREE.PCFShadowMap;
+                                //renderer.shadowMapType = THREE.BasicShadowMap;
+                                //renderer.devicePixelRatio = 50.0;
+                                var pixelWidth = Math.floor( windowWidth  / pixelRatio );
+                                var pixelHeight = Math.floor( windowHeight  / pixelRatio );
+                                var parameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, stencilBuffer: false };
+
+                                renderTargetObjects = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, parameters );
+                                renderTargetBillboards = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, parameters );
+                                renderTargetBlend = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false } );
+                                
+                                var depthMaterial = new THREE.ShaderMaterial(ShaderLibrary['depthRGBA_instancing']);
+                                depthMaterial._shadowPass = true;
+                                
+                                THREE.ImageUtils.crossOrigin = '';
+                                var mudTexture = THREE.ImageUtils.loadTexture(mudImageLink);
+                                mudTexture.wrapT = THREE.RepeatWrapping;
+                                mudTexture.wrapS = THREE.RepeatWrapping;
+                                mudTexture.repeat.set(1.0*scale,1.0*scale);
+                                var grassTexture = THREE.ImageUtils.loadTexture(grassImageLink);
+                                grassTexture.wrapT = THREE.RepeatWrapping;
+                                grassTexture.wrapS = THREE.RepeatWrapping;
+                                grassTexture.repeat.set(1*scale,1*scale);
+                                
+                                var dikeTexture = THREE.ImageUtils.loadTexture(dikeModelTextureLink);
+                                dikeTexture.wrapT = THREE.RepeatWrapping;
+                                dikeTexture.wrapS = THREE.RepeatWrapping;
+                                dikeTexture.repeat.set(1,1);
+                                
+                                var dikeGrassTexture = THREE.ImageUtils.loadTexture(dikeGrassTextureLink);
+                                dikeGrassTexture.wrapT = THREE.RepeatWrapping;
+                                dikeGrassTexture.wrapS = THREE.RepeatWrapping;
+                                dikeGrassTexture.repeat.set(1,1);
+                                
+                                var waveNormal = THREE.ImageUtils.loadTexture(waveNormalLink);
+                                waveNormal.wrapT = THREE.RepeatWrapping;
+                                waveNormal.wrapS = THREE.RepeatWrapping;
+                                waveNormal.repeat.set(1,1);
+                                
+                                var mudNormal = THREE.ImageUtils.loadTexture(mudNormalLink); 
+                                mudNormal.wrapT = THREE.RepeatWrapping;
+                                mudNormal.wrapS = THREE.RepeatWrapping;
+                                mudNormal.repeat.set(1,1);
+                                
+                                var tgaloader = new THREE.TGALoader();
+                                billboardTextureMap =  tgaloader.load( billboardTextureMapLink );
+                                farawayTextureMap = tgaloader.load(farawayTextureMapLink);
+                                
+                                var path = skyBoxImagePath;
+				var format = '.jpg';
+				var urls = [
+						path + 'px' + format, path + 'nx' + format,
+						path + 'py' + format, path + 'ny' + format,
+						path + 'pz' + format, path + 'nz' + format
+					];
+                                
+                                var skyboxTexture = THREE.ImageUtils.loadTextureCube( urls );
+				skyboxTexture.format = THREE.RGBFormat;
+                                skyboxTexture.mapping = THREE.CubeReflectionMapping;
+                                
+                                // LIGHTS
+                                hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.6 );
+                                hemiLight.position.set(1, 1600 * scale, 1);
+				scene.add( hemiLight );
+                                scene2.add( hemiLight.clone() );
+                                scene3.add( hemiLight.clone() );
+
+				dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
+                                dirLight.color.setHSL(1,1,.95);
+                                dirLight.position.set( 0, 20 * scale, 0);
+                                
+                                scene.add( dirLight );
+                                scene2.add( dirLight.clone() );
+                                scene3.add( dirLight.clone() );
+                                                                                                
+                                dirLight.castShadow = true;
+                                
+                                dirLight.shadowCameraNear = 12 * scale;
+				dirLight.shadowCameraFar = 30 * scale;
+				dirLight.shadowCameraFov = camera.fov;
+                                
+                                dirLight.shadowCameraLeft = -38 * scale;
+                                dirLight.shadowCameraRight = 38 * scale;
+                                dirLight.shadowCameraTop = 38 * scale;
+                                dirLight.shadowCameraBottom = -38 * scale;
+
+				dirLight.shadowBias = -0.001;
+				dirLight.shadowDarkness = 0.21;
+
+				dirLight.shadowMapWidth = 2048;// 8184
+				dirLight.shadowMapHeight = 2048;// 8184
+                                
+                                var materialShadow = new THREE.MeshPhongMaterial({color: "red"});
+                                materialShadow.side = THREE.DoubleSide;
+                                meshShadow = new THREE.Mesh(new THREE.BoxGeometry(scale*1.5,scale*1.5,scale*1.5), materialShadow);
+                                meshShadow.position.y = scale * heightScale * 0;
+                                meshShadow.position.x = 0 * scale;
+                                meshShadow.position.z = 0 * scale;
+                                meshShadow.visible = false;
+                                scene.add(meshShadow);
+                                dirLight.target = meshShadow;                                
+                                
+                                scene2.add(dike);
+                                dike.scale.x *= 1.0;
+                                dike.scale.y *= heightScale * 0.9;
+                                dike.scale.z *= 1.0;
+                                
+                                dike.position.y -= scale*1.5;
+                                dike.position.x += 33 * scale;
+                                dike.position.z -= 10 * scale;
+                                                                
+                                dike.autoupdate = false;
+                                dike.updateMatrix();
+                                
+                                dike.geometry.computeBoundingBox();
+                                
+                                dike.material.uniforms.stoneTexture.value = dikeTexture;
+                                dike.material.uniforms.grassTexture.value = dikeGrassTexture;
+                                
+                                
+                                var dikeGeometry = dike.geometry;
+                                var colorVariance = new Float32Array(dikeGeometry.attributes.position.length);
+                                var max = -Infinity;
+                                for(var i = 0; i < dikeGeometry.attributes.position.length; i+=3){
+                                    if (dikeGeometry.attributes.position.array[i+1] > max)
+                                      max = dikeGeometry.attributes.position.array[i+1];
+                                    var cv = .8 + Math.random() * .2;
+                                    colorVariance[i+0] = cv;
+                                    colorVariance[i+1] = cv;
+                                    colorVariance[i+2] = cv;
+                                }
+                                var maxHeight = max;
+                                console.log(maxHeight);
+                                
+                                dike.material.uniforms.maxHeight.value = maxHeight;
+                                dike.geometry.addAttribute("colorVariance", new THREE.BufferAttribute(colorVariance,3));
+                                
+                                var skyboxSize = scale * 560;
+                                
+                                var skyboxGeometry = new THREE.BoxGeometry(skyboxSize-200, skyboxSize+0, skyboxSize+200);
+                                var shader = THREE.ShaderLib[ "cube" ];
+				shader.uniforms[ "tCube" ].value = skyboxTexture;
+
+				var skyboxMaterial = new THREE.ShaderMaterial( {
+
+					fragmentShader: shader.fragmentShader,
+					vertexShader: shader.vertexShader,
+					uniforms: shader.uniforms,
+                                        depthWrite: true,
+					side: THREE.BackSide,
+				} );
+                                var skyboxMesh = new THREE.Mesh(skyboxGeometry, skyboxMaterial);
+                                skyboxMesh.position.x -= 0*scale;
+                                skyboxMesh.position.z += 50*scale;
+                                scene2.add(skyboxMesh);
+                                
+                                // TERRAIN
+                                var image = images[0];
+                                worldWidth = image.width;
+                                worldDepth = image.height; 
+                                worldHalfWidth = worldWidth / 2; 
+                                worldHalfDepth = worldDepth / 2;
+                                var data = getHeight(image);
+                                var data2 = getHeight(images[1]);
+                                
+                                var offsetWater = .2;
+                                var waterGeometry = new THREE.PlaneBufferGeometry( worldWidth * scale, worldDepth * scale,Math.ceil(worldWidth * offsetWater),Math.ceil(worldDepth * offsetWater));
+
+                                var waterFarMaterial = new THREE.ShaderMaterial(ShaderLibrary['waterFar']);
+                                waterFarMaterial.uniforms.sunDirection.value = hemiLight.position.clone().normalize();
+                                waterFarMaterial.uniforms.normalSampler.value = waveNormal;
+                                waterFarMaterial.uniforms.mirrorSampler.value = skyboxTexture;
+				waterFarMaterial.uniforms.sunColor.value = new THREE.Color(0xffffff);
+				waterFarMaterial.uniforms.waterColor.value = new THREE.Color(0x001e0f);
+				waterFarMaterial.uniforms.distortionScale.value = 500.0;
+                                waterMeshFar = new THREE.Mesh(waterGeometry, waterFarMaterial);
+                                scene2.add(waterMeshFar);
+                                waterMeshFar.rotation.x = - Math.PI * 0.5;
+                                waterMeshFar.position.y = scale * heightScale * 0.36;
+                                waterMeshFar.autoupdate = false;
+                                waterMeshFar.updateMatrix();
+                                waterMeshFar.visible = waterVisible;
+                                
+                                var waterNearMaterial = new THREE.ShaderMaterial(ShaderLibrary['waterNear']);
+                                waterNearMaterial.uniforms.sunDirection.value = hemiLight.position.clone().normalize();
+                                waterNearMaterial.uniforms.normalSampler.value = waveNormal;
+                                waterNearMaterial.uniforms.mirrorSampler.value = skyboxTexture;
+				waterNearMaterial.uniforms.sunColor.value = new THREE.Color(0xffffff);
+				waterNearMaterial.uniforms.waterColor.value = new THREE.Color(0x001e0f);
+				waterNearMaterial.uniforms.distortionScale.value = 500.0;
+                                waterMeshNear = new THREE.Mesh(waterGeometry, waterNearMaterial);
+                                scene.add(waterMeshNear);
+                                waterMeshNear.rotation.x = - Math.PI * 0.5;
+                                waterMeshNear.position.y = scale * heightScale * 0.36;
+                                waterMeshNear.autoupdate = false;
+                                waterMeshNear.updateMatrix();
+                                waterMeshNear.visible = waterVisible;
+                                
+                                
+                                var quads = [];
+                                var quadIndex = 0;
+                                var width = scale * worldWidth; 
+                                var height = scale * worldDepth;
+                                var widthSegments = worldWidth-1; 
+                                var heightSegments = worldDepth-1;
+                                var geometry = new THREE.BufferGeometry();
+
+                                var width_half = scale*worldHalfWidth;
+                                var height_half = scale*worldHalfDepth;
+
+                                var gridX = widthSegments || 1;
+                                var gridY = heightSegments || 1;
+
+                                var gridX1 = gridX + 1;
+                                var gridY1 = gridY + 1;
+
+                                var segment_width = width / gridX;
+                                var segment_height = height / gridY;
+
+                                var vertices = new Float32Array( gridX1 * gridY1 * 3 );
+                                var normals = new Float32Array( gridX1 * gridY1 * 3 );
+                                var uvs = new Float32Array( gridX1 * gridY1 * 2 );
+
+                                var offset = 0;
+                                var offset2 = 0;
+                                var index = 0;
+                                for ( var iy = 0; iy < gridY1; iy ++ ) {
+
+                                        var y = iy * segment_height - height_half;
+
+                                        for ( var ix = 0; ix < gridX1; ix ++ ) {
+
+                                                var x = ix * segment_width - width_half;
+
+                                                index = offset / 3;
+                                                vertices[ offset     ] = x;
+                                                vertices[ offset + 1 ] = - y;
+                                                vertices[ offset + 2 ] = data[index] * scale * heightScale;
+
+                                                normals[ offset + 2 ] = 1;
+
+                                                uvs[ offset2     ] = ix / gridX;
+                                                uvs[ offset2 + 1 ] = 1 - ( iy / gridY );
+
+                                                offset += 3;
+                                                offset2 += 2;
+
+                                        }
+
+                                }
+
+                                offset = 0;
+                                offset2 = 0;
+
+                                var indices = new Uint32Array( gridX * gridY * 6 );
+
+                                for ( var iy = 0, iy2 = 1; iy < gridY; iy ++, iy2 += 2 ) {
+                                        offset2 += iy2 * gridX1*2;
+
+                                        for ( var ix = 0, ix2 = 1; ix < gridX; ix ++, ix2 += 2 ) {
+                                                var s = data2[offset2+ix2];
+
+                                                var a = (ix + gridX1 * iy);
+                                                var b = (ix + gridX1 * ( iy + 1 ));
+                                                var c = (( ix + 1 ) + gridX1 * ( iy + 1 ));
+                                                var d = (( ix + 1 ) + gridX1 * iy);
+                                                var ph1 = (data[a]+data[c]) / 2;
+                                                var ph2 = (data[b]+data[d]) / 2;
+
+                                                var diff1 = Math.abs(ph1 - s);
+                                                var diff2 = Math.abs(ph2 - s);
+
+                                                if (diff1 > diff2){
+                                                    quads[quadIndex] = 1;
+                                                    indices[ offset     ] = a; // left bot
+                                                    indices[ offset + 1 ] = b; // left top
+                                                    indices[ offset + 2 ] = d; // right bot
+
+                                                    indices[ offset + 3 ] = b; //left top
+                                                    indices[ offset + 4 ] = c; //right top
+                                                    indices[ offset + 5 ] = d; //right bot 
+                                                }
+                                                else{
+                                                    quads[quadIndex] = 0;
+                                                    indices[ offset     ] = a;
+                                                    indices[ offset + 1 ] = c;
+                                                    indices[ offset + 2 ] = d;
+
+                                                    indices[ offset + 3 ] = a;
+                                                    indices[ offset + 4 ] = b;
+                                                    indices[ offset + 5 ] = c;
+                                                }
+
+                                                offset += 6;
+                                                quadIndex++;
+
+                                        }
+
+                                }
+                                geometry.addAttribute( 'index', new THREE.BufferAttribute( indices, 1 ) );
+                                geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+                                geometry.addAttribute( 'normal', new THREE.BufferAttribute( normals, 3 ) );
+                                geometry.addAttribute( 'uv', new THREE.BufferAttribute( uvs, 2 ) );
+                                
+                                geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+
+                                geometry.computeVertexNormals();
+                                geometry.computeTangents();
+                                geometry.computeBoundingSphere();
+                                geometry.computeBoundingBox();
+                                
+                                var max = -Infinity; 
+                                var min = +Infinity;
+
+                                for (var i = 0; i < data.length; i++) {
+                                  if (data[i] > max)
+                                    max = data[i];
+                                  if (data[i] < min)
+                                    min = data[i];
+                                }
+                                //var maxHeight = Math.max.apply(Math,data) * scale * heightScale;
+                                var maxHeight = max * scale * heightScale;
+                                
+                                customMaterialPhong = new THREE.ShaderMaterial( ShaderLibrary['terrainPhongNear']  );
+                                customMaterialLambert = new THREE.ShaderMaterial( ShaderLibrary['terrainPhongFar']  );
+                                
+                                terrainmesh = new THREE.Mesh(geometry, customMaterialPhong);
+                                terrainmesh.visible = false;
+                                //wireframe = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({wireframe:true, color: "brown"}));
+                                //scene.add(wireframe);
+                                //scene.add(terrainmesh);
+                                
+                                // Calculate positions
+                                var objectPositions = [];
+                                var objectColors = [];
+                                var objectScales = [];
+                                var objectRotations = [];
+                                var objectPlantType = [];
+                                var billboardPositions = [];
+                                var billboardSizes = [];
+                                var billboardColorLOD = [];
+                                var billboardScales = [];
+                                var billboardTextureNumber = [];
+                                var objectColorRandom = [];
+                                var terrainColors = new Float32Array(worldWidth*worldDepth * 3);
+                                var terrainPlants = new Float32Array(worldWidth*worldDepth * 1);
+                                var terrainTypes = new Float32Array(worldWidth*worldDepth * 1);
+                                var terrainTempTypes = [];
+                                var terrainTempColors = [];
+                                
+                                for(var i = 0; i < worldWidth*worldDepth; i++){
+                                    terrainPlants[i] = 0;
+                                    terrainColors[i] = new THREE.Color(0,0,0);
+                                    terrainTypes[i] = 0;
+                                    terrainTempTypes[i] = [];
+                                    terrainTempColors[i] = [];
+                                    for (var j = 0; j < plantTypes.length; j++){
+                                        terrainTempTypes[i][j] = 0.0;
+                                        terrainTempColors[i][j] = new THREE.Color(0,0,0);
+                                    }
+                                }
+                                                                
+                                var nBlocksWidth = Math.pow(2,levelsLOD-1);
+                                var nBlocksDepth = Math.pow(2,levelsLOD-1);
+                                
+                                var blockWidth = worldWidth / nBlocksWidth;
+                                var blockDepth = worldDepth / nBlocksDepth;
+                                                                
+                                var totalBlocks = nBlocksWidth * nBlocksDepth;
+                                
+                                var locationsPerBlock = [];
+                                for (var i = 0; i < totalBlocks; i++){
+                                    locationsPerBlock[i] = [];
+                                }
+
+                                for (var i = 0; i < locations.length-1; i+=3){
+                                    var blockIndex = Math.floor(locations[i+0] / blockWidth) + Math.floor(locations[i+1] / blockDepth) * nBlocksWidth;
+                                    locationsPerBlock[blockIndex].push(i);
+                                }
+
+                                for (var i = 0; i < totalBlocks; i++){
+                                    var locBlock = locationsPerBlock[i];
+                                    var pos = new Float32Array( locBlock.length * 3 );
+                                    var colors = new Float32Array(locBlock.length * 3);
+                                    var scales = new Float32Array(locBlock.length * 3);
+                                    var rotations = new Float32Array(locBlock.length * 3);
+                                    var color = new THREE.Color();
+                                    var cRandom = new THREE.Color();
+                                    var types = new Float32Array( locBlock.length );
+                                    var billboardPos = new Float32Array( locBlock.length * 3);
+                                    var billboardSize = new Float32Array( locBlock.length );
+                                    var colorRandom = new Float32Array( locBlock.length * 3);
+                                    var billboardCol = new Float32Array( locBlock.length * 3);
+                                    var billboardScale = new Float32Array( locBlock.length );
+                                    var billboardTN = new Float32Array( locBlock.length);
+
+                                    for (var j = 0; j < locBlock.length; j++) {
+                                        var ind = locBlock[j];
+                                        var xpos = locations[ind];
+                                        var zpos = locations[ind+1];
+
+                                        var xf = Math.floor(xpos);
+                                        var xc = Math.ceil(xpos);
+                                        var zf = Math.floor(zpos);
+                                        var zc = Math.ceil(zpos);
+
+                                        var iBotLeft = (xf + zf * (worldWidth)) * 3 + 1;
+                                        var iBotRight = (xc + zf * (worldWidth)) * 3 + 1;
+                                        var iTopRight = (xc + zc * (worldWidth)) * 3 + 1;
+                                        var iTopLeft = (xf + zc * (worldWidth)) * 3 + 1;
+                                        var quadIndex = xf + zf * (worldWidth);
+
+                                        var ypos = 0;
+                                        var h1 = 0;
+                                        var h2 = 0;
+                                        var h3 = 0;
+                                        var h4 = 0;
+                                        var hxBot = 0;
+                                        var hxTop = 0;
+                                        var hyLeft = 0;
+                                        var hyRight = 0;
+                                        var heights = [];
+                                        // X bottom
+                                        if(iBotLeft < vertices.length && iBotRight < vertices.length){
+                                            h1 = vertices[iBotLeft];
+                                            h2 = vertices[iBotRight];
+                                            hxBot = h1 + (h2 - h1) * (xpos - xf);
+                                            heights[0] = hxBot;
+                                        }
+                                        if(iBotLeft < vertices.length && iTopLeft < vertices.length){
+                                            h1 = vertices[iBotLeft];
+                                            h4 = vertices[iTopLeft];
+                                            hyLeft = h1 + (h4 - h1) * (zpos - zf);
+                                            heights[1] = hyLeft;
+                                        }
+                                        if(iTopRight < vertices.length && iBotRight < vertices.length){
+                                            h2 = vertices[iBotRight];
+                                            h3 = vertices[iTopRight];
+                                            hyRight = h2 + (h3 - h2) * (zpos - zf);
+                                            heights[2] = hyRight;
+                                        }
+                                        if(iTopRight < vertices.length && iTopLeft < vertices.length){
+                                            h3 = vertices[iTopRight];
+                                            h4 = vertices[iTopLeft];
+                                            hxTop = h4 + (h3 - h4) * (xpos - xf);
+                                            heights[3] = hxTop;
+                                        }
+                                        
+                                        var distA = distance(xpos,zpos,xf,zf);
+                                        var distB = distance(xpos,zpos,xf,zc);
+                                        var distC = distance(xpos,zpos,xc,zc);
+                                        var distD = distance(xpos,zpos,xc,zf);
+                                        var avgDist1, avgDist2;
+                                        var xp, zp;
+                                        var xdist, zdist, tdist;
+                                        if(quads[quadIndex] === 1){
+                                            avgDist1 = distA + distB + distD;
+                                            avgDist2 = distB + distC + distD;
+                                            if(avgDist1 < avgDist2){
+                                                xdist = distance(xpos,zpos,xpos,zf);
+                                                zdist = distance(xpos,zpos,xf,zpos);
+                                                tdist = xdist+zdist;
+                                                ypos = (zdist / tdist) * heights[1] + (xdist / tdist) * heights[0];
+                                            }
+                                            else{
+                                                xdist = distance(xpos,zpos,xpos,zf);
+                                                zdist = distance(xpos,zpos,xc,zpos);
+                                                tdist = xdist+zdist;
+                                                ypos = (xdist / tdist) * heights[3] + (zdist / tdist) * heights[2];
+                                            }
+                                        }
+                                        else{
+                                            avgDist1 = distA + distB + distC;
+                                            avgDist2 = distA + distC + distD;
+                                            if(avgDist1 < avgDist2){
+                                                xdist = distance(xpos,zpos,xpos,zf);
+                                                zdist = distance(xpos,zpos,xf,zpos);
+                                                tdist = xdist+zdist;
+                                                ypos = (zdist / tdist) * heights[1] + (xdist / tdist) * heights[3];
+                                            }
+                                            else{
+                                                xdist = distance(xpos,zpos,xpos,zf);
+                                                zdist = distance(xpos,zpos,xc,zpos);
+                                                tdist = xdist+zdist;
+                                                ypos = (xdist / tdist) * heights[0] + (zdist / tdist) * heights[2];
+                                            }
+                                        }
+                                        var t = locations[ind+2];
+                                        
+                                        var rScale = Math.random();
+                                        var rColorLight = .8 + rScale * .125; 
+                                        var rColorSpartina = .8 + (Math.random() * .1);
+                                        var rColorArtemisia = .95 + (Math.random() * .05);
+                                        var rColorElymus = .9 + (Math.random() * .1);
+                                        var rColor = .5 + (Math.random() / 2.0);
+                                        var rColorLimonium = .9 + (Math.random() * (1 - 0.8));
+                                        var rColorAtriplex =.9 + Math.random() * .02;
+                                        if ( t === 1){
+                                            color.setRGB(0,1,0);
+                                            cRandom.setRGB(rColorElymus*rColorLight,1.0*rColorLight,rColorElymus*rColorLight);
+                                        }
+                                        else if ( t === 2){
+                                            color.setRGB(1,1,0);
+                                            cRandom.setRGB(rColorSpartina*rColorLight,1.0*rColorLight,rColorSpartina*rColorLight);
+                                        }
+                                        else if ( t === 3){
+                                            color.setRGB(1,0,0);
+                                            cRandom.setRGB(rColorAtriplex*rColorLight,1.0*rColorLight,rColorAtriplex*rColorLight);
+                                        }
+                                        else if ( t === 4){
+                                            color.setRGB(0,0,1);
+                                            cRandom.setRGB(1.0,1.0,1.0);
+                                        }
+                                        else if ( t === 5){
+                                            color.setRGB(0,1,1);
+                                            cRandom.setRGB(rColorLimonium*rColorLight,rColorLimonium*rColorLight,1.0*rColorLight);
+                                        }
+                                        else if ( t === 6){
+                                            color.setRGB(1,0,1);
+                                            cRandom.setRGB(rColorArtemisia*rColorLight,1.0*rColorLight,rColorArtemisia*rColorLight);
+                                        }
+                                        else if ( t === 7){
+                                            color.setRGB(1,1,1);
+                                            cRandom.setRGB(rColor,1.0,rColor);
+                                        }
+                                        billboardSize[j] = plantBillboardSizes[t-1] + rScale * plantModelSizes[t-1] * 1.0;
+                                        billboardSize[j] *= billboardSizeMultiplier;
+                                        
+                                        colors[j * 3 + 0] = color.r;
+                                        colors[j * 3 + 1] = color.g;
+                                        colors[j * 3 + 2] = color.b;
+                                        
+                                        colorRandom[j*3 + 0] = cRandom.r;
+                                        colorRandom[j*3 + 1] = cRandom.g;
+                                        colorRandom[j*3 + 2] = cRandom.b;
+                                        
+                                        scales[j * 3 + 0] = plantModelSizes[t-1] + rScale * plantModelSizes[t-1];
+                                        scales[j * 3 + 1] = plantModelSizes[t-1] + rScale * plantModelSizes[t-1];
+                                        scales[j * 3 + 2] = plantModelSizes[t-1] + rScale * plantModelSizes[t-1];
+                                        
+                                        var rRotate = Math.random() * Math.PI * 2;
+                                        rotations[j * 3 + 0] = 0;
+                                        rotations[j * 3 + 1] = rRotate;
+                                        rotations[j * 3 + 2] = 0;
+                                        
+                                        types[j] = t-1;
+                                        
+                                        pos[ j * 3 + 0 ] = (xpos - worldHalfWidth) * scale;
+                                        pos[ j * 3 + 1 ] = ypos + scales[j * 3 + 1] * .0; //I only take into account the random scales but not the initial scale of each plant (for cubes I do)
+                                        pos[ j * 3 + 2 ] = (zpos - worldHalfDepth) * scale;
+                                        var rotMat = new THREE.Matrix4();
+                                        var scaleMat = new THREE.Matrix4();
+                                        var transMat = new THREE.Matrix4();
+                                        
+                                        rotMat.set(Math.cos(rRotate), 0.0, -1.0*Math.sin(rRotate), 0.0, 0.0, 1.0, 0.0, 0.0, Math.sin(rRotate), 0.0, Math.cos(rRotate), 0.0, 0.0, 0.0, 0.0, 1.0);
+                                        scaleMat.set(scales[j * 3 + 0], 0.0, 0.0, 0.0, 0.0, scales[j * 3 + 1], 0.0, 0.0, 0.0, 0.0, scales[j * 3 + 2], 0.0, 0.0, 0.0, 0.0, 1.0);
+                                        transMat.set(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,  pos[ j * 3 + 0 ],  pos[ j * 3 + 1 ],  pos[ j * 3 + 2 ], 1.0);
+                                        var tm = new THREE.Matrix4();
+                                        tm.multiply(transMat);
+                                        tm.multiply(rotMat);
+                                        tm.multiply(scaleMat);
+                                        
+                                        billboardPos[j*3 + 0] = (xpos - worldHalfWidth) * scale;
+                                        billboardPos[j*3 + 1] = ypos+ Math.sqrt(billboardSize[j]*.5) * .024;
+                                        billboardPos[j*3 + 2] = (zpos - worldHalfDepth) * scale;
+                                        
+                                        billboardCol[j*3 + 0] = plantColorsLOD[t-1].x;
+                                        billboardCol[j*3 + 1] = plantColorsLOD[t-1].y;
+                                        billboardCol[j*3 + 2] = plantColorsLOD[t-1].z;
+                                        
+                                        billboardScale[j] = plantBillboardScales[t-1];
+                                        
+                                        billboardTN[j] = Math.floor(Math.random() * 4);
+                                        
+                                        var vi;
+                                        if(t !== 7 && t !== 4 && t!== 5){
+                                            if(distA < scale * offsetDist){
+                                                vi = (iBotLeft - 1) / 3;
+                                                if(vi < worldWidth*worldDepth){
+                                                    terrainTempColors[vi][t-1].add(cRandom);
+                                                    terrainPlants[vi] += 1;
+                                                    terrainTempTypes[vi][t-1] += 1.0;
+                                                }
+                                            }
+                                            if(distB < scale * offsetDist){
+                                                vi = (iTopLeft - 1) / 3;
+                                                if(vi < worldWidth*worldDepth){
+                                                    terrainTempColors[vi][t-1].add(cRandom);
+                                                    terrainPlants[vi] += 1;
+                                                    terrainTempTypes[vi][t-1] += 1.0;
+                                                }
+                                            }
+                                            if(distC < scale * offsetDist){
+                                                vi = (iTopRight - 1) / 3;
+                                                if(vi < worldWidth*worldDepth){
+                                                    terrainTempColors[vi][t-1].add(cRandom);
+                                                    terrainPlants[vi] += 1;
+                                                    terrainTempTypes[vi][t-1] += 1.0;
+                                                }
+                                            }
+                                            if(distD < scale * offsetDist){
+                                                vi = (iBotRight - 1) / 3;
+                                                if(vi < worldWidth*worldDepth){
+                                                    terrainTempColors[vi][t-1].add(cRandom);
+                                                    terrainPlants[vi] += 1;
+                                                    terrainTempTypes[vi][t-1] += 1.0;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    objectColors[i] = colors;
+                                    objectPositions[i] = pos;
+                                    objectScales[i] = scales;
+                                    objectRotations[i] = rotations;
+                                    objectPlantType[i] = types;
+                                    billboardPositions[i] = billboardPos;
+                                    billboardSizes[i] = billboardSize;
+                                    objectColorRandom[i] = colorRandom;
+                                    billboardColorLOD[i] = billboardCol;
+                                    billboardScales[i] = billboardScale;
+                                    billboardTextureNumber[i] = billboardTN;
+                                }
+                                
+                                for(var i = 0; i < worldWidth*worldDepth; i++){
+                                    terrainTypes[i] = 0;
+                                    
+                                    var max = -Infinity;
+                                    var maxIndex = 0;
+                                    var modifiers = [3.5, 3.5, 3.5, 1.0, 1.0, 1.0, 1.0];
+                                    for (var j = 0; j < terrainTempTypes[i].length; j++) {
+                                        if ((terrainTempTypes[i][j]*modifiers[j]) > max){
+                                            max = terrainTempTypes[i][j]*modifiers[j];
+                                            maxIndex = j;
+                                        }
+                                    }
+                                    terrainTypes[i] = maxIndex;
+                                    if(terrainTempTypes[i][maxIndex] > 0.0){
+                                        terrainTempColors[i][maxIndex].r /= terrainTempTypes[i][maxIndex];
+                                        terrainTempColors[i][maxIndex].g /= terrainTempTypes[i][maxIndex];
+                                        terrainTempColors[i][maxIndex].b /= terrainTempTypes[i][maxIndex];
+                                        terrainColors[i*3 + 0] = terrainTempColors[i][maxIndex].r;
+                                        terrainColors[i*3 + 1] = terrainTempColors[i][maxIndex].g;
+                                        terrainColors[i*3 + 2] = terrainTempColors[i][maxIndex].b;
+                                    }
+                                    else{
+                                        terrainColors[i*3 + 0] = 1.0;
+                                        terrainColors[i*3 + 1] = 1.0;
+                                        terrainColors[i*3 + 2] = 1.0;
+                                    }
+                                }
+                                
+                                geometry.addAttribute( 'nPlants', new THREE.BufferAttribute( terrainPlants, 1 ));
+                                geometry.addAttribute( 'tColor', new THREE.BufferAttribute( terrainColors, 3 ));
+                                geometry.addAttribute( 'tType', new THREE.BufferAttribute( terrainTypes, 1 ));
+                                
+                                terrains = [];
+                                linesLOD = [];
+                                terrainToObjectIDs = [];
+                                for (var l = 0; l < levelsLOD; l++){
+                                    //console.log("Level of Detail: " + l);
+                                    terrains[l] = [];
+                                    linesLOD[l] = [];
+                                    centerTerrains[l] = [];
+                                    terrainToObjectIDs[l] = [];
+                                    terrainBoxes[l] = [];
+                                    
+                                    var nParents, parent, nTerrainBlocksWidth, nTerrainBlocksDepth, nWidth, nDepth; 
+                                    if(l === 0){
+                                        nParents = 1;
+                                        nTerrainBlocksWidth = 1;
+                                        nTerrainBlocksDepth = 1;
+                                        parent = terrainmesh;
+                                    }
+                                    else{
+                                        nParents = terrains[l-1].length;
+                                        nTerrainBlocksWidth = 2;
+                                        nTerrainBlocksDepth = 2;
+                                    }
+                                    nWidth = Math.pow(2,l);
+                                    nDepth = Math.pow(2,l);
+                                    var tileSizeX = worldWidth / nWidth;
+                                    var tileSizeY = worldDepth / nDepth;
+                                    var tid = 0;
+                                    
+                                    threshT[l] = Math.sqrt(tileSizeX*tileSizeX + tileSizeY*tileSizeY) * scale;
+                                    threshT2[l] = threshT[l] * 2.0;
+                                    //console.log("Number of parents: " + nParents);
+                                    for(var q = 0; q < nParents; q++) {
+                                        //console.log("Parent: " + q);
+                                        if(l !== 0){
+                                            parent = terrains[l-1][q];
+                                        }
+                                        var width, depth;
+                                        var parentWidth = Math.ceil(parent.geometry.boundingBox.size().x / scale);
+                                        var parentDepth = Math.ceil(parent.geometry.boundingBox.size().z / scale); 
+
+                                        var totWidth = 0;
+                                        var totDepth = 0;
+
+                                        var offsetWidth = 0;
+                                        var offsetDepth = 0;
+                                        var tBlockWidth = (parentWidth-1) / nTerrainBlocksWidth;
+                                        var tBlockDepth = (parentDepth-1) / nTerrainBlocksDepth;
+                                        var terrainBlockWidth = Math.floor(tBlockWidth);
+                                        var terrainBlockDepth = Math.floor(tBlockDepth);
+                                        var remainderWidth = (terrainBlockWidth - tBlockWidth) * nTerrainBlocksWidth;
+                                        var remainderDepth = (terrainBlockDepth - tBlockDepth) * nTerrainBlocksDepth;
+
+                                        var thresholdWidth, thresholdDepth;
+                                        if(remainderWidth > 0){
+                                            thresholdWidth = nTerrainBlocksWidth - remainderWidth;
+                                        }
+                                        else{
+                                            thresholdWidth = nTerrainBlocksWidth - (-1 * remainderWidth);
+                                            offsetWidth = 2;
+                                        }
+                                        thresholdWidth = Math.round(thresholdWidth);
+
+                                        if(remainderDepth > 0){
+                                            thresholdDepth = nTerrainBlocksDepth - remainderDepth;
+                                        }
+                                        else{
+                                            thresholdDepth = nTerrainBlocksDepth - (-1 * remainderDepth);
+                                            offsetDepth = 2;
+                                        }
+                                        thresholdDepth = Math.round(thresholdDepth);
+
+                                        for(var i = 0; i < nTerrainBlocksDepth; i++){
+                                            totWidth = 0;
+                                            for(var j = 0; j < nTerrainBlocksWidth; j++){
+                                                if (i >= thresholdDepth){
+                                                    depth = terrainBlockDepth + offsetDepth;
+                                                }
+                                                else{
+                                                    depth = terrainBlockDepth+1;
+                                                }
+                                                if(j >= thresholdWidth){
+                                                    width = terrainBlockWidth + offsetWidth;
+                                                }
+                                                else{
+                                                    width = terrainBlockWidth+1;
+                                                }
+                                                
+                                                terrains[l][tid] = generateTerrainQuad(width,depth,totWidth,totDepth,parent, customMaterialLambert);
+                                                //scene.add( terrains[l][tid] );
+                                                scene2.add( terrains[l][tid] );
+
+                                                linesLOD[l][tid] = drawLines(terrains[l][tid]);
+                                                scene2.add( linesLOD[l][tid] );
+                                                
+                                                centerTerrains[l][tid] = new THREE.Vector3();
+                                                
+                                                var terrainSize = terrains[l][tid].geometry.boundingBox.size();
+                                                var terrainMinimum = terrains[l][tid].geometry.boundingBox.min;
+                                                centerTerrains[l][tid].x = terrainMinimum.x + (terrainSize.x / 2);
+                                                centerTerrains[l][tid].z = terrainMinimum.z + (terrainSize.z / 2);
+                                                terrainBoxes[l][tid] = new THREE.Box2();
+                                                terrainBoxes[l][tid].setFromCenterAndSize(new THREE.Vector2(centerTerrains[l][tid].x,centerTerrains[l][tid].z), new THREE.Vector2(terrainSize.x,terrainSize.z));
+
+                                                var tMinScaledX = terrainMinimum.x / scale;
+                                                var tMinScaledZ = terrainMinimum.z / scale;
+                                                tMinScaledX += worldHalfWidth;
+                                                tMinScaledZ += worldHalfDepth;
+                                                
+                                                var nxn = tMinScaledX / tileSizeX;
+                                                var nyn = tMinScaledZ / tileSizeY;
+                                                var nx = Math.round(nxn);
+                                                var ny = Math.round(nyn);
+                                                
+                                                terrainToObjectIDs[l][tid] = nx + ny * nWidth;
+
+                                                totWidth += (width-1);
+
+                                                tid++; 
+                                            }
+                                            totDepth += (depth-1);
+                                        }
+                                    }
+                                }
+                                thresholdNear = threshT[levelsLOD-1];
+                                
+                                customMaterialPhong.uniforms.grassTexture.value = grassTexture;
+                                customMaterialPhong.uniforms.mudTexture.value = mudTexture;
+                                customMaterialPhong.uniforms.heightScale.value = maxHeight;
+                                customMaterialPhong.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                customMaterialPhong.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                customMaterialPhong.uniforms.normalMap.value = mudNormal;
+                                customMaterialPhong.uniforms.normalScale.value = new THREE.Vector2(1.1,1.1);
+                                customMaterialPhong.uniforms.environmentCube.value = skyboxTexture;
+                                                                
+                                customMaterialLambert.uniforms.grassTexture.value = grassTexture;
+                                customMaterialLambert.uniforms.mudTexture.value = mudTexture;
+                                customMaterialLambert.uniforms.heightScale.value = maxHeight;
+                                customMaterialLambert.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                customMaterialLambert.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                customMaterialLambert.uniforms.threshLODNear.value = thresholdBillboard - transitionZoneBillboards * offsetLODTerrain;
+                                customMaterialLambert.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards * offsetLODTerrain;
+                                customMaterialLambert.uniforms.farawayTexture.value = farawayTextureMap;
+                                customMaterialLambert.uniforms.normalMap.value = mudNormal;
+                                customMaterialLambert.uniforms.normalScale.value = new THREE.Vector2(1.1,1.1);
+                                customMaterialLambert.uniforms.environmentCube.value = skyboxTexture;
+                                customMaterialLambert.uniforms.overlayFactor.value = overlayFactor;
+                                
+                                waterMeshNear.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterMeshNear.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                
+                                waterMeshFar.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterMeshFar.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                
+                                var offsetX = terrains[levelsLOD-1][0].geometry.boundingBox.size().x;
+                                var offsetZ = terrains[levelsLOD-1][0].geometry.boundingBox.size().z;
+                                
+                                offsetFrustum =  -1 * (offsetX + offsetZ);
+                                
+                                terrainObjects = [];
+                                for(var i = 0; i < terrains[levelsLOD-1].length; i++){
+                                    terrainObjects[i] = new THREE.Mesh(terrains[levelsLOD-1][i].geometry,customMaterialPhong);
+                                    terrainObjects[i].frustumCulled = false;
+                                    terrainObjects[i].autoupdate = false;
+                                    terrainObjects[i].visible = false;
+                                    terrainObjects[i].updateMatrix();
+                                    terrainObjects[i].castShadow = false;
+                                    terrainObjects[i].receiveShadow = true;
+                                    scene.add(terrainObjects[i]);
+                                }
+                                
+                                console.log("merging");
+                                var objectPositionMerged = [];
+                                var objectColorsMerged = [];
+                                var objectScaleMerged = [];
+                                var objectRotationMerged = [];
+                                var objectPlantTypeMerged = [];
+                                var billboardPositionsMerged = [];
+                                var billboardSizesMerged = [];
+                                var objectColorRandomMerged = [];
+                                var billboardColorLODMerged = [];
+                                var billboardScalesMerged = [];
+                                var billboardTextureNumberMerged = [];
+                                objectPositionMerged[levelsLOD-1] = objectPositions; 
+                                objectColorsMerged[levelsLOD-1] = objectColors;
+                                objectScaleMerged[levelsLOD-1] = objectScales;
+                                objectRotationMerged[levelsLOD-1] = objectRotations;
+                                objectPlantTypeMerged[levelsLOD-1] = objectPlantType;
+                                billboardPositionsMerged[levelsLOD-1] = billboardPositions;
+                                billboardSizesMerged[levelsLOD-1] = billboardSizes;
+                                objectColorRandomMerged[levelsLOD-1] = objectColorRandom;
+                                billboardColorLODMerged[levelsLOD-1] = billboardColorLOD;
+                                billboardScalesMerged[levelsLOD-1] = billboardScales;
+                                billboardTextureNumberMerged[levelsLOD-1] = billboardTextureNumber;
+                                
+                                for(var i = levelsLOD-1; i > 0; i--){
+                                    objectPositionMerged[i-1] = [];
+                                    objectColorsMerged[i-1] = [];
+                                    objectScaleMerged[i-1] = [];
+                                    objectRotationMerged[i-1] = [];
+                                    objectPlantTypeMerged[i-1] = [];
+                                    billboardPositionsMerged[i-1] = [];
+                                    billboardSizesMerged[i-1] = [];
+                                    objectColorRandomMerged[i-1] = [];
+                                    billboardColorLODMerged[i-1] = [];
+                                    billboardScalesMerged[i-1] = [];
+                                    billboardTextureNumberMerged[i-1] = [];
+                                    var nWidth = Math.pow(2,(i));
+                                    var nDepth = Math.pow(2,(i));
+                                    var index = 0;
+                                    var length0,length1,length2,length3;
+                                    for(var ny = 0; ny < nDepth; ny+=2){
+                                        for(var nx = 0; nx < nWidth; nx+=2){
+                                            length0 = objectPositionMerged[i][nx + ny * nWidth].length;
+                                            length1 = objectPositionMerged[i][(nx + 1) + ny * nWidth].length;
+                                            length2 = objectPositionMerged[i][nx + (ny + 1) * nWidth].length;
+                                            length3 = objectPositionMerged[i][(nx + 1) + (ny + 1) * nWidth].length;
+                                            
+                                            objectPositionMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                                            objectPositionMerged[i-1][index].set(objectPositionMerged[i][nx + ny * nWidth],0); 
+                                            objectPositionMerged[i-1][index].set(objectPositionMerged[i][(nx + 1) + ny * nWidth],length0); 
+                                            objectPositionMerged[i-1][index].set(objectPositionMerged[i][nx + (ny + 1) * nWidth],length0 + length1);
+                                            objectPositionMerged[i-1][index].set(objectPositionMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+
+                                            objectColorsMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                                            objectColorsMerged[i-1][index].set(objectColorsMerged[i][nx + ny * nWidth],0);
+                                            objectColorsMerged[i-1][index].set(objectColorsMerged[i][(nx + 1) + ny * nWidth],length0);
+                                            objectColorsMerged[i-1][index].set(objectColorsMerged[i][nx + (ny+1) * nWidth],length0 + length1);
+                                            objectColorsMerged[i-1][index].set(objectColorsMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+                                            
+                                            objectScaleMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                                            objectScaleMerged[i-1][index].set(objectScaleMerged[i][nx + ny * nWidth],0);
+                                            objectScaleMerged[i-1][index].set(objectScaleMerged[i][(nx + 1) + ny * nWidth],length0);
+                                            objectScaleMerged[i-1][index].set(objectScaleMerged[i][nx + (ny+1) * nWidth],length0 + length1);
+                                            objectScaleMerged[i-1][index].set(objectScaleMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+                                            
+                                            objectRotationMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                                            objectRotationMerged[i-1][index].set(objectRotationMerged[i][nx + ny * nWidth],0);
+                                            objectRotationMerged[i-1][index].set(objectRotationMerged[i][(nx + 1) + ny * nWidth],length0);
+                                            objectRotationMerged[i-1][index].set(objectRotationMerged[i][nx + (ny+1) * nWidth],length0 + length1);
+                                            objectRotationMerged[i-1][index].set(objectRotationMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+                                            
+                                            objectPlantTypeMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
+                                            objectPlantTypeMerged[i-1][index].set(objectPlantTypeMerged[i][nx + ny * nWidth],0);
+                                            objectPlantTypeMerged[i-1][index].set(objectPlantTypeMerged[i][(nx + 1) + ny * nWidth],length0/3);
+                                            objectPlantTypeMerged[i-1][index].set(objectPlantTypeMerged[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
+                                            objectPlantTypeMerged[i-1][index].set(objectPlantTypeMerged[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
+                                            
+                                            billboardPositionsMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3));
+                                            billboardPositionsMerged[i-1][index].set(billboardPositionsMerged[i][nx + ny * nWidth],0);
+                                            billboardPositionsMerged[i-1][index].set(billboardPositionsMerged[i][(nx + 1) + ny * nWidth],length0);
+                                            billboardPositionsMerged[i-1][index].set(billboardPositionsMerged[i][nx + (ny+1) * nWidth],(length0 + length1));
+                                            billboardPositionsMerged[i-1][index].set(billboardPositionsMerged[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2));
+                                            
+                                            billboardSizesMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
+                                            billboardSizesMerged[i-1][index].set(billboardSizesMerged[i][nx + ny * nWidth],0);
+                                            billboardSizesMerged[i-1][index].set(billboardSizesMerged[i][(nx + 1) + ny * nWidth],length0/3);
+                                            billboardSizesMerged[i-1][index].set(billboardSizesMerged[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
+                                            billboardSizesMerged[i-1][index].set(billboardSizesMerged[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
+                                            
+                                            objectColorRandomMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                                            objectColorRandomMerged[i-1][index].set(objectColorRandomMerged[i][nx + ny * nWidth],0);
+                                            objectColorRandomMerged[i-1][index].set(objectColorRandomMerged[i][(nx + 1) + ny * nWidth],length0);
+                                            objectColorRandomMerged[i-1][index].set(objectColorRandomMerged[i][nx + (ny+1) * nWidth],length0 + length1);
+                                            objectColorRandomMerged[i-1][index].set(objectColorRandomMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+                                            
+                                            billboardColorLODMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                                            billboardColorLODMerged[i-1][index].set(billboardColorLODMerged[i][nx + ny * nWidth],0);
+                                            billboardColorLODMerged[i-1][index].set(billboardColorLODMerged[i][(nx + 1) + ny * nWidth],length0);
+                                            billboardColorLODMerged[i-1][index].set(billboardColorLODMerged[i][nx + (ny+1) * nWidth],length0 + length1);
+                                            billboardColorLODMerged[i-1][index].set(billboardColorLODMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+                                            
+                                            billboardScalesMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
+                                            billboardScalesMerged[i-1][index].set(billboardScalesMerged[i][nx + ny * nWidth],0);
+                                            billboardScalesMerged[i-1][index].set(billboardScalesMerged[i][(nx + 1) + ny * nWidth],length0/3);
+                                            billboardScalesMerged[i-1][index].set(billboardScalesMerged[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
+                                            billboardScalesMerged[i-1][index].set(billboardScalesMerged[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
+                                            
+                                            billboardTextureNumberMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
+                                            billboardTextureNumberMerged[i-1][index].set(billboardTextureNumberMerged[i][nx + ny * nWidth],0);
+                                            billboardTextureNumberMerged[i-1][index].set(billboardTextureNumberMerged[i][(nx + 1) + ny * nWidth],length0/3);
+                                            billboardTextureNumberMerged[i-1][index].set(billboardTextureNumberMerged[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
+                                            billboardTextureNumberMerged[i-1][index].set(billboardTextureNumberMerged[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
+                                            index++;
+                                        }
+                                    }
+                                }
+                                
+                                
+                                var plantPositions = [];
+                                var plantRotations = [];
+                                var plantScales = [];
+                                var plantColors = [];
+                                for(var i = 0; i < plantTypes.length; i++){
+                                    plantPositions[i] = [];
+                                    plantRotations[i] = [];
+                                    plantScales[i] = [];
+                                    plantColors[i] = [];
+                                }
+                                
+                                var pt;
+                                for (var i = 0; i < totalBlocks; i++){
+                                    
+                                    for(var t = 0; t < plantTypes.length; t++){
+                                        plantPositions[t][i] = [];
+                                        plantRotations[t][i] = [];
+                                        plantScales[t][i] = [];
+                                        plantColors[t][i] = [];
+                                    }
+                                    
+                                    for (var j = 0; j < objectPlantType[i].length; j++){
+                                        pt = objectPlantType[i][j];
+                                        for(var t = 0; t < plantTypes.length; t++){
+                                            if(t === pt){
+                                                plantPositions[t][i].push(objectPositions[i][j*3 + 0]);
+                                                plantPositions[t][i].push(objectPositions[i][j*3 + 1]);
+                                                plantPositions[t][i].push(objectPositions[i][j*3 + 2]);
+                                                plantRotations[t][i].push(objectRotations[i][j*3 + 0]);
+                                                plantRotations[t][i].push(objectRotations[i][j*3 + 1]);
+                                                plantRotations[t][i].push(objectRotations[i][j*3 + 2]);
+                                                plantScales[t][i].push(objectScales[i][j*3 + 0]);
+                                                plantScales[t][i].push(objectScales[i][j*3 + 1]);
+                                                plantScales[t][i].push(objectScales[i][j*3 + 2]);
+                                                plantColors[t][i].push(objectColorRandom[i][j*3 + 0]);
+                                                plantColors[t][i].push(objectColorRandom[i][j*3 + 1]);
+                                                plantColors[t][i].push(objectColorRandom[i][j*3 + 2]);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                var plantInstancePositions = [];
+                                var plantInstanceRotations = [];
+                                var plantInstanceScales = [];
+                                var plantInstanceColors = [];
+                                
+                                for(var t = 0; t < plantTypes.length; t++){
+                                    plantInstancePositions[t] = [];
+                                    plantInstanceRotations[t] = [];
+                                    plantInstanceScales[t] = [];
+                                    plantInstanceColors[t] = []
+                                    for(var i = 0; i < totalBlocks; i++){
+                                        plantInstancePositions[t][i] = new Float32Array(plantPositions[t][i]);
+                                        plantInstanceRotations[t][i] = new Float32Array(plantRotations[t][i]);
+                                        plantInstanceScales[t][i] = new Float32Array(plantScales[t][i]);
+                                        plantInstanceColors[t][i] = new Float32Array(plantColors[t][i]);
+                                    }
+                                }
+                                
+                                console.log("done merging");
+
+                                console.log("Billboard creation");
+                                
+                                customMaterialBillboards = new THREE.ShaderMaterial(ShaderLibrary['billboard']);
+                                billboardTextures = THREE.ImageUtils.loadTexture( billboardsLink );
+                                
+                                plantModelMaterials[0] = THREE.ImageUtils.loadTexture( texturesElymusLink );
+                                plantModelMaterials[1] = THREE.ImageUtils.loadTexture( texturesSpartinaLink );
+                                plantModelMaterials[2] = THREE.ImageUtils.loadTexture( texturesAtriplexLink );
+                                plantModelMaterials[3] = THREE.ImageUtils.loadTexture( texturesAsterLink );
+                                plantModelMaterials[4] = THREE.ImageUtils.loadTexture( texturesLimoniumLink );
+                                plantModelMaterials[5] = THREE.ImageUtils.loadTexture( texturesArtemisiaLink );
+                                plantModelMaterials[6] = THREE.ImageUtils.loadTexture( texturesSalicorniaLink );
+                                
+                                for(var t = 0; t < plantTypes.length; t++){
+                                    plantModelMaterials[t].magFilter = THREE.LinearFilter;
+                                    plantModelMaterials[t].minFilter = THREE.LinearFilter;
+                                }
+                                
+                                // Billboards
+                                billboards = [];
+                                
+                                billboardTextureMap.anisotropy = 1;
+                                billboardTextureMap.generateMipmaps = true;
+                                
+                                //customMaterialBillboards.uniforms.scale.value = 500;
+                                customMaterialBillboards.uniforms.billboardTextureAtlas.value = billboardTextureMap;
+                                customMaterialBillboards.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                customMaterialBillboards.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                customMaterialBillboards.uniforms.threshLODNear.value = thresholdBillboard;
+                                customMaterialBillboards.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards;
+                                customMaterialBillboards.sizeAttenuation = true;
+                                customMaterialBillboards.uniforms.nTypes.value = 3;
+                                customMaterialBillboards.uniforms.overlayFactor.value = overlayFactor;
+                                //customMaterialBillboards.blending =  THREE.NoBlending;
+                                for( var l = 0; l < levelsLOD; l++){
+                                    billboards[l] = [];
+                                    for(var i = 0; i < objectPositionMerged[l].length; i++){
+                                        var _particleGeom = new THREE.BufferGeometry();
+                                        _particleGeom.addAttribute( 'position', new THREE.BufferAttribute( billboardPositionsMerged[l][i], 3 ) );
+                                        _particleGeom.addAttribute( 'colorInstance', new THREE.BufferAttribute( objectColorRandomMerged[l][i], 3 ) );
+                                        _particleGeom.addAttribute( 'plantType', new THREE.BufferAttribute( objectPlantTypeMerged[l][i], 1 ) );
+                                        _particleGeom.addAttribute( 'size', new THREE.BufferAttribute( billboardSizesMerged[l][i], 1 ) );
+                                        _particleGeom.addAttribute( 'scale', new THREE.BufferAttribute( billboardScalesMerged[l][i], 1 ) );
+                                        _particleGeom.addAttribute( 'colorLOD', new THREE.BufferAttribute( billboardColorLODMerged[l][i], 3 ) );
+                                        _particleGeom.addAttribute( 'textureNumber', new THREE.BufferAttribute( billboardTextureNumberMerged[l][i], 1 ) );
+                                        billboards[l][i] = new THREE.PointCloud( _particleGeom, customMaterialBillboards );
+                                        billboards[l][i].frustumCulled = false;
+                                        billboards[l][i].autoupdate = false;
+                                        billboards[l][i].updateMatrix();
+                                        billboards[l][i].visible = false;
+                                        scene2.add(billboards[l][i]);
+                                    }
+                                }
+                                console.log("Billboard creation finished");
+                                
+                                console.log("Instance object creation");
+                               
+                                //instancingMaterialPhong2 = new THREE.ShaderMaterial(ShaderLibrary['instancingTextureMaterial']);
+                                //instancingMaterialPhong2.transparent = true;
+                                // Load plant MESH
+                                instancingMaterials = [];
+                                instancingDepthMaterials = [];
+                                instancingMaterialReference = new THREE.ShaderMaterial( ShaderLibrary['instancingColorMaterial'] );
+                                instancingMaterialReference.vertexColors = THREE.VertexColors;
+                                instancingMaterialReference.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                instancingMaterialReference.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                instancingMaterialReference.side = THREE.DoubleSide;
+                                
+                                var instancingMaterialReference2 = new THREE.ShaderMaterial( ShaderLibrary['instancingTextureMaterial'] );
+                                instancingMaterialReference2.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                instancingMaterialReference2.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                instancingMaterialReference2.side = THREE.DoubleSide;
+                                for(var t =0; t < plantTypes.length; t++){
+                                    instancingMaterials[t] = instancingMaterialReference2.clone();
+                                    instancingMaterials[t].uniforms.textureMap.value = plantModelMaterials[t];
+                                    instancingMaterials[t].uniforms.nTexture.value = nTextures[t];
+                                    
+                                    instancingDepthMaterials[t] = depthMaterial.clone();
+                                    instancingDepthMaterials[t].uniforms.textureMap.value = plantModelMaterials[t];
+                                    instancingDepthMaterials[t].uniforms.nTexture.value = nTextures[t];
+                                }
+                                
+                                plantModelBlocks = [];
+                                for(var t = 0; t < plantTypes.length; t++){
+                                    plantModelBlocks[t] = [];
+                                    for(var j = 0; j < objectPositionMerged[levelsLOD-1].length; j++){
+                                        var plantModelInstancedGeom = new THREE.BufferGeometry();
+                                        plantModelInstancedGeom.addAttribute( 'position', plantModels[t].geometry.attributes.position);
+                                        plantModelInstancedGeom.addAttribute( 'normal', plantModels[t].geometry.attributes.normal);
+                                        plantModelInstancedGeom.addAttribute( 'uv', plantModels[t].geometry.attributes.uv);
+                                        plantModelInstancedGeom.addAttribute( 'textureIndex', plantModels[t].geometry.attributes.textureIndex );
+                                        plantModelInstancedGeom.addAttribute( 'positionInstances', new THREE.BufferAttribute( plantInstancePositions[t][j], 3 ) );
+                                        plantModelInstancedGeom.addAttribute( 'colorInstances', new THREE.BufferAttribute( plantInstanceColors[t][j], 3 ) );
+                                        plantModelInstancedGeom.addAttribute( 'colorInstance', new THREE.BufferAttribute( plantInstanceColors[t][j], 3 ) );
+                                        plantModelInstancedGeom.addAttribute( 'scaleInstances', new THREE.BufferAttribute( plantInstanceScales[t][j], 3 ) );
+                                        plantModelInstancedGeom.addAttribute( 'rotateInstances', new THREE.BufferAttribute( plantInstanceRotations[t][j], 3 ) );
+                                        plantModelInstancedGeom.attributes.positionInstances.instancing = true;
+                                        plantModelInstancedGeom.attributes.colorInstances.instancing = true;
+                                        plantModelInstancedGeom.attributes.colorInstance.instancing = true;
+                                        plantModelInstancedGeom.attributes.scaleInstances.instancing = true;
+                                        plantModelInstancedGeom.attributes.rotateInstances.instancing = true;
+                                        
+                                        plantModelBlocks[t][j] = new THREE.Mesh( plantModelInstancedGeom, instancingMaterials[t] );
+                                        plantModelBlocks[t][j].rotation.x = -Math.PI / 2;
+                                        plantModelBlocks[t][j].scale.x *= 1.0;
+                                        plantModelBlocks[t][j].scale.y *= 1.0;
+                                        plantModelBlocks[t][j].scale.z *= 1.0;
+                                        plantModelBlocks[t][j].instancing = true;
+                                        plantModelBlocks[t][j].visible = false;
+                                        plantModelBlocks[t][j].frustumCulled = false;
+                                        plantModelBlocks[t][j].autoupdate = false;
+                                        plantModelBlocks[t][j].updateMatrix();
+                                        plantModelBlocks[t][j].castShadow = true;
+                                        plantModelBlocks[t][j].receiveShadow = true;
+                                        plantModelBlocks[t][j].customDepthMaterial = instancingDepthMaterials[t];
+                                        scene.add(plantModelBlocks[t][j]);
+                                    }
+                                }
+                                
+                                var geo = new THREE.BoxGeometry(.33,.33,.33,1,1,1);
+                                geo.computeVertexNormals();
+                                var cubeGeo = new THREE.BufferGeometry().fromGeometry(geo);
+                                objects = [];
+                                for(var i = 0; i < objectPositionMerged[levelsLOD-1].length; i++){
+                                    var objectInstancedGeom = new THREE.BufferGeometry();
+                                    objectInstancedGeom.addAttribute('position',cubeGeo.attributes.position);
+                                    objectInstancedGeom.addAttribute('normal',cubeGeo.attributes.normal);
+                                    objectInstancedGeom.addAttribute('uv',cubeGeo.attributes.uv);
+                                    //objectInstancedGeom.addAttribute( 'textureIndex', plantModels[t].geometry.attributes.textureIndex );
+                                    objectInstancedGeom.addAttribute( 'positionInstances', new THREE.BufferAttribute( objectPositionMerged[levelsLOD-1][i], 3 ) );
+                                    objectInstancedGeom.addAttribute( 'colorInstances', new THREE.BufferAttribute( objectColorsMerged[levelsLOD-1][i], 3 ) );
+                                    objectInstancedGeom.addAttribute( 'scaleInstances', new THREE.BufferAttribute( objectScaleMerged[levelsLOD-1][i], 3 ) );
+                                    objectInstancedGeom.addAttribute( 'rotateInstances', new THREE.BufferAttribute( objectRotationMerged[levelsLOD-1][i], 3 ) );
+                                    objectInstancedGeom.attributes.positionInstances.instancing = true;
+                                    objectInstancedGeom.attributes.colorInstances.instancing = true;
+                                    objectInstancedGeom.attributes.scaleInstances.instancing = true;
+                                    objectInstancedGeom.attributes.rotateInstances.instancing = true;
+            
+                                    objects[i] = new THREE.Mesh( objectInstancedGeom, instancingMaterialReference );
+                                    objects[i].scale.x *= 2.0;
+                                    objects[i].scale.y *= 2.0;
+                                    objects[i].scale.z *= 2.0;
+                                    objects[i].instancing = true;
+                                    objects[i].visible = false;
+                                    objects[i].frustumCulled = false;
+                                    objects[i].autoupdate = false;
+                                    objects[i].updateMatrix();
+                                    objects[i].castShadow = true;
+                                    objects[i].receiveShadow = true;
+                                    scene.add(objects[i]);
+                                }
+                                                                
+                                console.log("Finished instance object generation");
+                                
+                                //scene.matrixAutoUpdate = false;
+                                //scene2.matrixAutoUpdate = false;
+                                //scene3.matrixAutoUpdate = false;
+                                
+                                var fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+                                fxaaPass.uniforms.resolution.value = new THREE.Vector2(1/pixelWidth,1/pixelHeight);
+                                fxaaPass.renderToScreen = true;
+                                //Billboards processing
+                                var composerBillboards = new THREE.EffectComposer( renderer, renderTargetBillboards );
+                                
+                                var renderPassBillboards = new THREE.RenderPass( scene2, camera );
+                                var copyPassBillboards = new THREE.ShaderPass(THREE.CopyShader);
+
+                                renderPassBillboards.renderToScreen = false;
+                                
+				composerBillboards.addPass( renderPassBillboards );
+                                composerBillboards.addPass( copyPassBillboards );
+
+                                // Object processing
+                                var composerObjects = new THREE.EffectComposer( renderer, renderTargetObjects );
+                                var renderPassObjects = new THREE.RenderPass( scene, camera );
+                                var copyPassObjects = new THREE.ShaderPass(THREE.CopyShader);
+                                
+                                renderPassObjects.renderToScreen = false;
+                                
+                                composerObjects.addPass( renderPassObjects );
+                                composerObjects.addPass( copyPassObjects );
+                                
+                                // Blending processing
+                                var composerBlending = new THREE.EffectComposer( renderer, renderTargetBlend );
+                                var blendPassObjects = new THREE.ShaderPass(THREE.BlendAdvancedShader);
+                                var copyPassBlend = new THREE.ShaderPass(THREE.CopyShader);
+                                fxaaPass.uniforms.tDiffuse.value = renderTargetObjects;
+                                copyPassBlend.renderToScreen = true;
+                                blendPassObjects.uniforms.tDiffuse1.value = composerObjects.renderTarget1;
+                                blendPassObjects.uniforms.tDiffuse2.value = composerBillboards.renderTarget1;
+                                
+                                composerBlending.addPass( blendPassObjects );
+                                composerBlending.addPass( copyPassBlend );
+                                //composerBlending.addPass( fxaaPass );
+                                
+                                // Effect processing
+//                                var composerEffect = new THREE.EffectComposer( renderer, renderTargetDOF );
+//                                var dofPass = new THREE.ShaderPass(THREE.BokehShader);
+//                                var ssaoPass = new THREE.ShaderPass(THREE.SSAOShader);
+//                                var copyPass = new THREE.ShaderPass(THREE.CopyShader);
+//                                var copyPass2 = new THREE.ShaderPass(THREE.CopyShader);
+//                                copyPass.renderToScreen = true;
+                                //copyPass.tDiffuse = renderTargetBlend;
+                                //ssaoPass.uniforms.tDepth.value = renderTargetObjects;
+//                                ssaoPass.uniforms.size.value = new THREE.Vector2( 1024, 1024 );
+//                                ssaoPass.uniforms.cameraNear.value = camera.near;
+//                                ssaoPass.uniforms.cameraFar.value = camera.far;
+//                                ssaoPass.uniforms.onlyAO.value = 1;
+//                                ssaoPass.uniforms.aoClamp.value = 0.5;
+//                                ssaoPass.uniforms.lumInfluence.value = 0.5;
+//                                dofPass.uniforms.tDepth.value = renderTargetObjects;
+//                                dofPass.uniforms.focus.value = 1.0;
+//                                dofPass.uniforms.aspect.value = 1.0;
+//                                dofPass.uniforms.aperture.value = .0025;
+//                                dofPass.uniforms.maxblur.value = 1.0;
+//                                fxaaPass.uniforms.tDiffuse.value = composerObjects.renderTarget1;
+
+                                //
+                                //composerEffect.addPass(copyPass2);
+                                //composerEffect.addPass(dofPass);
+                                //composerEffect.addPass(fxaaPass);
+                                //composerEffect.addPass(ssaoPass);
+                                //composerEffect.addPass(copyPass);
+				postprocessing.composerBillboards = composerBillboards;
+                                postprocessing.composerObjects = composerObjects;
+                                postprocessing.composerBlending = composerBlending;
+                                //postprocessing.composerDOF = composerEffect;                                
+                                // STATS
+                                glS = new glStats();
+                                tS = new threeStats( renderer );
+
+                                rS = new rStats( {
+                                    values: {
+                                        frame: { caption: 'Total frame time (ms)', average: true },
+                                        fps: { caption: 'Framerate (FPS)', average: true },
+                                        calls: { caption: 'Calls (three.js)' },
+                                        raf: { caption: 'Time since last rAF (ms)',average:true },
+                                        rstats: { caption: 'rStats update (ms)' }
+                                    },
+                                    groups: [
+                                        { caption: 'Framerate', values: [ 'fps', 'raf' ],average:true },
+                                        { caption: 'Frame Budget', values: [ 'frame', 'update', 'render' ],average:true }
+                                    ],
+                                    fractions: [
+                                        { base: 'frame', steps: [ 'update', 'render' ],average:true }
+                                    ],
+                                    plugins: [
+                                        tS,
+                                        glS
+                                    ]
+                                } );
+
+				//
+				document.addEventListener( 'keydown', onKeyDown, false );
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+                        
+                        function onKeyDown ( event ) {
+
+				switch( event.keyCode ) {
+
+                                        case 80: /*P*/  billboardsVisibility(); break;
+                                        case 79: /*O*/  objectsVisibility(); break;
+                                        case 66: /*B*/  terrainsVisibility(); break;
+                                        case 88: /*X*/  lookat = !lookat; break;
+                                        case 72: /*H*/  decreaseFarLOD(); break;
+                                        case 76: /*L*/  increaseFarLOD(); break;
+                                        case 89: /*Y*/  controls.rollSpeed += 0.0005; break;
+                                        case 90: /*Z*/  overlayStatus = !overlayStatus; break;
+                                        case 78: /*N*/  controls.rollSpeed -= 0.0005; break;
+                                        case 71: /*G*/  controls.movementSpeed -= 0.025 * scale; break; 
+                                        case 84: /*T*/  controls.movementSpeed += 0.025 * scale; break;
+                                        case 73: /*I*/  increaseLOD(); break;
+                                        case 74: /*J*/  decreaseLOD(); break;                                        
+                                        case 75: /*K*/  waterVisible = !waterVisible; waterMeshNear.visible = waterVisible; waterMeshFar.visible = waterVisible; break;
+                                        case 77: /*M*/  toggleShadow(); break; 
+                                        //case 85: /*U*/  linesLODVisibility(); break;
+                                        case 85: /*U*/  controls.autoForward = !controls.autoForward; break;
+                                        case 86: /*V*/  BLENDING_MODE = !BLENDING_MODE; break;
+                                        case 67: /*C*/  plantVisible = !plantVisible; if(plantVisible) plantVisibility(); objectsVisible = false; break;
+
+				}
+
+			};
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+                                
+				renderer.setSize( window.innerWidth / resolution, window.innerHeight / resolution);
+                                //renderer.setViewport( 0, 0, (window.innerWidth / resolution)*window.devicePixelRatio, (window.innerHeight / resolution)*window.devicePixelRatio );
+                                
+//                                renderTargetObjects.setSize(window.innerWidth / resolution, window.innerHeight / resolution);
+//                                renderTargetBillboards.setSize(window.innerWidth / resolution, window.innerHeight / resolution);
+//                                renderTargetBlend.setSize(window.innerWidth / resolution, window.innerHeight / resolution);
+				//controls.handleResize();
+
+			}
+                        
+                        function toggleShadow(){
+                            for(var t = 0; t < plantTypes.length; t++){
+                                    for(var j = 0; j < plantModelBlocks[t].length; j++){
+                                        plantModelBlocks[t][j].castShadow = !plantModelBlocks[t][j].castShadow;
+                                    }
+                            }
+                        }
+                        
+                        function increaseLOD(){
+                            offsetLOD += .25;
+                            customMaterialBillboards.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            customMaterialBillboards.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            instancingMaterialReference.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            instancingMaterialReference.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            
+                            for(var t = 0; t <  plantTypes.length; t++){
+                                instancingMaterials[t].uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                instancingMaterials[t].uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            }
+                            
+                            customMaterialPhong.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            customMaterialPhong.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            customMaterialLambert.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            customMaterialLambert.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            
+                            waterMeshNear.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            waterMeshNear.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+
+                            waterMeshFar.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            waterMeshFar.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                        }
+                        
+                        function decreaseLOD(){
+                            if (offsetLOD > 0){
+                                offsetLOD -= .25;
+                                customMaterialBillboards.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                customMaterialBillboards.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                instancingMaterialReference.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                instancingMaterialReference.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                
+                                for(var t = 0; t <  plantTypes.length; t++){
+                                    instancingMaterials[t].uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                    instancingMaterials[t].uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                }
+                                
+                                customMaterialPhong.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                customMaterialPhong.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                customMaterialLambert.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                customMaterialLambert.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                waterMeshNear.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterMeshNear.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                
+                                waterMeshFar.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterMeshFar.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            }
+                        }
+                        
+                        function increaseFarLOD(){
+                            thresholdBillboard += 2 * scale;
+                            customMaterialLambert.uniforms.threshLODNear.value = thresholdBillboard - transitionZoneBillboards * offsetLODTerrain;
+                            customMaterialLambert.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards * offsetLODTerrain;
+                            
+                            customMaterialBillboards.uniforms.threshLODNear.value = thresholdBillboard;
+                            customMaterialBillboards.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards;
+                        }
+                        
+                        function decreaseFarLOD(){
+                            thresholdBillboard -= 2 * scale;
+                            customMaterialLambert.uniforms.threshLODNear.value = thresholdBillboard - transitionZoneBillboards * offsetLODTerrain;
+                            customMaterialLambert.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards * offsetLODTerrain;
+                            
+                            customMaterialBillboards.uniforms.threshLODNear.value = thresholdBillboard;
+                            customMaterialBillboards.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards;
+                        }
+                        
+                        function distance(x1,y1,x2,y2){
+                            return Math.sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1));
+                        }
+                        
+                        function generateTerrainQuad(width,depth,startWidth,startDepth,parentTerrainQuad, customMaterialPhong){
+                            var positions = parentTerrainQuad.geometry.attributes.position.array;
+                            var indices = parentTerrainQuad.geometry.attributes.index.array;
+                            var normals = parentTerrainQuad.geometry.attributes.normal.array;
+                            var uvs = parentTerrainQuad.geometry.attributes.uv.array;
+                            var nPlants = parentTerrainQuad.geometry.attributes.nPlants.array;
+                            var tColors = parentTerrainQuad.geometry.attributes.tColor.array;
+                            var tTypes = parentTerrainQuad.geometry.attributes.tType.array;
+                            
+                            var parentWidth = Math.ceil(parentTerrainQuad.geometry.boundingBox.size().x / scale);
+                            
+                            var positions2 = new Float32Array( width * depth * 3 );
+                            var indices2 = new Uint32Array( (width-1) * (depth-1) * 6 );   
+                            var normals2 = new Float32Array( width * depth * 3 );
+                            var uvs2 = new Float32Array( width * depth * 2 );
+                            var nPlants2 = new Float32Array( width * depth);
+                            var tColors2 = new Float32Array( width * depth * 3);
+                            var tTypes2 = new Float32Array( width * depth );
+
+                            var index = 0;
+                            var index2 = 0;
+                            // should be updated when different planeblocks are created
+                            var startIndex = startWidth + startDepth * (parentWidth-1);
+                            var startInd = indices[startIndex*6];
+                            for(var bd  = 0; bd < depth-1; bd++){
+                                index = startIndex*6 + bd * (parentWidth-1) * 6;
+                                for(var bw = 0; bw < width-1; bw++){
+                                    var i0 = indices[index+0];
+                                    var i1 = indices[index+1];
+                                    var i2 = indices[index+2];
+                                    var i3 = indices[index+3];
+                                    var i4 = indices[index+4];
+                                    var i5 = indices[index+5];
+                                    var h0 = positions[i0*3+1];
+                                    var h1 = positions[i1*3+1];
+                                    var h2 = positions[i2*3+1];
+                                    var h3 = positions[i3*3+1];
+                                    var h4 = positions[i4*3+1];
+                                    var h5 = positions[i5*3+1];
+                                    i0 -= bd * (parentWidth - width);
+                                    i1 -= bd * (parentWidth - width);
+                                    i2 -= bd * (parentWidth - width);
+                                    i3 -= bd * (parentWidth - width);
+                                    i4 -= bd * (parentWidth - width);
+                                    i5 -= bd * (parentWidth - width);
+                                    var avgi = (i0 + i2 + i2 + i3 + i4 + i5) / 6;
+                                    var i0n = i0 - startInd - (i0 > avgi) * (parentWidth - width);
+                                    var i1n = i1 - startInd - (i1 > avgi) * (parentWidth - width);
+                                    var i2n = i2 - startInd - (i2 > avgi) * (parentWidth - width);
+                                    var i3n = i3 - startInd - (i3 > avgi) * (parentWidth - width);
+                                    var i4n = i4 - startInd - (i4 > avgi) * (parentWidth - width);
+                                    var i5n = i5 - startInd - (i5 > avgi) * (parentWidth - width);
+
+                                    //if(h0 > scale*.025 && h1 > scale*.025 && h2 > scale*.025){
+                                    indices2[index2+0] = i0n;
+                                    indices2[index2+1] = i1n;
+                                    indices2[index2+2] = i2n;
+                                    index2 += 3;
+                                    //}
+                                    //if(h3 > scale*.025 && h4 > scale*.025 && h5 > scale*.025){
+                                    indices2[index2+0] = i3n;
+                                    indices2[index2+1] = i4n;
+                                    indices2[index2+2] = i5n;
+                                    index2 += 3;
+                                    //}
+                                    index += 6;                                            
+                                }
+                            }
+
+                            var index1 = 0;
+                            var index2 = 0;
+                            var index3 = 0;
+                            var index4 = 0;
+                            var index5 = 0;
+                            var index6 = 0;
+                            var startIndex = startWidth + startDepth * (parentWidth-0);
+                            for(var bd  = 0; bd < depth; bd++){
+                                index1 = startIndex * 3 + bd * (parentWidth-0) * 3;
+                                index3 = startIndex * 2 + bd * (parentWidth-0) * 2;
+                                index5 = startIndex * 1 + bd * (parentWidth-0) * 1;
+                                for(var bw = 0; bw < width; bw++){
+                                    positions2[index2+0] = positions[index1+0];
+                                    positions2[index2+1] = positions[index1+1];
+                                    positions2[index2+2] = positions[index1+2];
+                                    normals2[index2+0] = normals[index1+0];
+                                    normals2[index2+1] = normals[index1+1];
+                                    normals2[index2+2] = normals[index1+2];
+                                    uvs2[index4+0] = uvs[index3+0];
+                                    uvs2[index4+1] = uvs[index3+1];
+                                    nPlants2[index6] = nPlants[index5];
+                                    tColors2[index2+0] = tColors[index1+0];
+                                    tColors2[index2+1] = tColors[index1+1];
+                                    tColors2[index2+2] = tColors[index1+2];
+                                    tTypes2[index6] = tTypes[index5];
+
+                                    index1 += 3;
+                                    index2 += 3;
+                                    index3 += 2;
+                                    index4 += 2;
+                                    index5 += 1;
+                                    index6 += 1;
+                                }
+                            }
+
+                            var geometryBlock = new THREE.BufferGeometry();
+
+                            geometryBlock.addAttribute( 'index', new THREE.BufferAttribute( indices2, 1 ) );
+                            geometryBlock.addAttribute( 'position', new THREE.BufferAttribute( positions2, 3 ) );
+                            geometryBlock.addAttribute( 'normal', new THREE.BufferAttribute( normals2, 3 ) );
+                            geometryBlock.addAttribute( 'uv', new THREE.BufferAttribute( uvs2, 2 ) );
+                            geometryBlock.addAttribute( 'nPlants', new THREE.BufferAttribute( nPlants2, 1 ) );
+                            geometryBlock.addAttribute( 'tColor', new THREE.BufferAttribute( tColors2, 3 ) );
+                            geometryBlock.addAttribute( 'tType', new THREE.BufferAttribute( tTypes2, 1 ) );
+
+                            geometryBlock.computeBoundingSphere();
+                            geometryBlock.computeBoundingBox();
+                            var terrainQuad = new THREE.Mesh(geometryBlock, customMaterialPhong);
+                            terrainQuad.frustumCulled = false;
+                            terrainQuad.autoupdate = false;
+                            terrainQuad.visible = false;
+                            terrainQuad.updateMatrix();
+                            return terrainQuad;
+                        }
+                        
+                        function drawLines(mesh){
+                            //Draw Level of Detail lines
+                            var meshPositions = mesh.geometry.attributes.position.array;
+                            var size = mesh.geometry.boundingBox.size();
+                            var width = Math.ceil(size.x / scale)+0;
+                            var depth = Math.ceil(size.z / scale)+0;
+                            
+                            var geometryLines = new THREE.BufferGeometry();
+                            var positionsLines = new Float32Array((depth-1.5)*2*3 + (width)*2*3);
+                            var indexLine = 0;
+                            
+                            for(var i = 0; i < width*3; i+=3){
+                                positionsLines[indexLine+0] = meshPositions[i + 0];
+                                positionsLines[indexLine+1] = meshPositions[i + 1] + scale * 0.05;
+                                positionsLines[indexLine+2] = meshPositions[i + 2];
+                                indexLine += 3;
+                            }
+                            
+                            var startIndex = (width-1)*3;
+                            for(var i = 3; i < (depth-1)*3; i+=3){
+                                positionsLines[indexLine+0] = meshPositions[startIndex+i*width + 0];
+                                positionsLines[indexLine+1] = meshPositions[startIndex+i*width + 1] + scale * 0.05;
+                                positionsLines[indexLine+2] = meshPositions[startIndex+i*width + 2];
+                                indexLine += 3;
+                            }
+                            
+                            startIndex = width*(depth-1)*3;
+                            for(var i = (width-1)*3; i >= 0; i-=3){
+                                positionsLines[indexLine+0] = meshPositions[startIndex+i + 0];
+                                positionsLines[indexLine+1] = meshPositions[startIndex+i + 1] + scale * 0.05;
+                                positionsLines[indexLine+2] = meshPositions[startIndex+i + 2];
+                                indexLine += 3;
+                            }
+                            
+                            var startIndex = 0;
+                            for(var i = (depth-2)*3; i >= 0; i-=3){
+                                positionsLines[indexLine+0] = meshPositions[startIndex+i*width + 0];
+                                positionsLines[indexLine+1] = meshPositions[startIndex+i*width + 1] + scale * 0.05;
+                                positionsLines[indexLine+2] = meshPositions[startIndex+i*width + 2];
+                                indexLine += 3;
+                            }
+                            
+                            
+                            geometryLines.addAttribute( 'position', new THREE.BufferAttribute( positionsLines, 3 ) );
+                            geometryLines.computeBoundingSphere();
+                            
+                            var lineLOD = new THREE.Line(geometryLines, materialLines);
+                            
+                            lineLOD.frustumCulled = false;
+                            lineLOD.autoupdate = false;
+                            lineLOD.visible = false;
+                            lineLOD.updateMatrix();
+                            
+                            return lineLOD;
+                        }
+                        
+                        function getHeight(img) {
+                                var canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                var context = canvas.getContext('2d');
+                                context.drawImage(img,0,0,img.width, img.height);
+                                var pix = context.getImageData(0,0, img.width, img.height).data;                                
+                                var size = img.width * img.height;
+                                var data = new Float32Array( size );
+
+                                var j=0;
+                                for (var i = 0; i<pix.length; i +=4) {
+                                    data[j++] = pix[i] / 255;
+                                }
+
+                                return data;
+                        }
+                        
+                        function preloadimages(arr){
+                            var newimages=[], loadedimages=0;
+                            var postaction=function(){};
+                            //var arr=(typeof arr!=="object")? [arr] : arr;
+                            function imageloadpost(){
+                                loadedimages++;
+                                if (loadedimages===arr.length){
+                                    postaction(newimages); //call postaction and pass in newimages array as parameter
+                                }
+                            }
+                            for (var i=0; i<arr.length; i++){
+                                newimages[i]=new Image();
+                                newimages[i].crossOrigin = '';
+                                newimages[i].onload=function(){
+                                    imageloadpost();
+                                };
+                                newimages[i].onerror=function(){
+                                    imageloadpost();
+                                };
+                                newimages[i].src=arr[i];
+                            }
+                            return { //return blank object with done() method
+                                done:function(f){
+                                    postaction=f || postaction; //remember user defined callback functions to be called when images load
+                                }
+                            };
+                        }
+                        
+                        function preLoadPlantModel(arr){
+                            var loadedModels=[];
+                            var loaded = 0;
+                            var postaction=function(){};
+                            function plantModelsloadpost(object, index){
+                                loadedModels[index] = object;
+                                loaded++;
+                                if((arr.length / 2) === loaded){
+                                    postaction(loadedModels); //call postaction and pass in newimages array as parameter\
+                                }
+                            }
+                            for(var i = 0; i < arr.length; i+=2){
+                                var loader = new THREE.OBJMTLLoader();
+                                loader.load( arr[i], arr[i+1], function ( object ) {
+                                    var texIndex = 1.0;
+                                    var plantModelGeometry = new THREE.BufferGeometry();
+                                    plantModelGeometry.addAttribute('position',new THREE.BufferAttribute(new Float32Array(0),3));
+                                    plantModelGeometry.addAttribute('normal',new THREE.BufferAttribute(new Float32Array(0),3));
+                                    plantModelGeometry.addAttribute('uv',new THREE.BufferAttribute(new Float32Array(0),2));
+                                    plantModelGeometry.addAttribute('textureIndex',new THREE.BufferAttribute(new Float32Array(0),1));
+                                    object.traverse( function ( child ) {
+                                        if(child.material instanceof THREE.MeshPhongMaterial){
+                                            //console.log(child.material.name);
+                                            child.geometry.computeVertexNormals();
+                                            child.geometry = new THREE.BufferGeometry().fromGeometry(child.geometry);
+
+                                            var texIndices = new Float32Array(child.geometry.attributes.position.length / 3);
+                                            for(var t = 0; t < texIndices.length; t++){
+                                                texIndices[t] = texIndex;
+                                            }
+                                            child.geometry.addAttribute('textureIndex',new THREE.BufferAttribute(texIndices,1));
+                                            plantModelGeometry.merge(child.geometry);
+
+                                            texIndex++; 
+                                        }
+                                    });
+                                    
+                                    var plantModel = new THREE.Mesh(plantModelGeometry);
+                                    plantModel.rotation.x = -Math.PI / 2;
+                                    plantModel.autoupdate = false;
+                                    plantModel.updateMatrix();
+                                    plantModel.frustumCulled = false;
+                                    plantModel.visible = false;
+                                    
+                                    var plantIndex = 0;
+                                    console.log(object.children[2].material.name);
+                                    for(var t = 0; t < plantTypes.length; t++){
+                                        if(object.children[2].material.name.indexOf(plantTypes[t]) >= 0){
+                                            plantIndex = t;
+                                            break;
+                                        }
+                                    }
+
+                                    plantModelsloadpost(plantModel, plantIndex);
+                                });
+                            }
+                            return { //return blank object with done() method
+                                done:function(f){
+                                    postaction=f || postaction; //remember user defined callback functions to be called when images load
+                                }
+                            };
+                        }
+                        
+                        function preLoadDike(dikeLink){
+                            var loadedDike;
+                            var postaction=function(){};
+                            function dikeloadpost(){
+                                postaction(loadedDike); //call postaction and pass in newimages array as parameter\
+                            }
+                            
+                            var loader = new THREE.OBJLoader();
+                            loader.load( dikeLink, function ( object ) {
+                                
+                                var material = new THREE.ShaderMaterial(ShaderLibrary["dykeShader"]);
+                                loadedDike = new THREE.Mesh(object.children[0].geometry, material);
+                                dikeloadpost();
+                            });
+                            return { //return blank object with done() method
+                                done:function(f){
+                                    postaction=f || postaction; //remember user defined callback functions to be called when images load
+                                }
+                            };
+                        }
+                        
+                        function preLoadLocations(textLink){
+                            var loadedLocations = [];
+                            var postaction=function(){};
+                            function locationsloadpost(){
+                                postaction(loadedLocations); //call postaction and pass in newimages array as parameter
+                            }
+                            
+                            var rawFile = new XMLHttpRequest();
+                            rawFile.open("GET", textLink);
+                            rawFile.onreadystatechange = function ()
+                            {
+                                if(rawFile.readyState === 4 && rawFile.status === 200)
+                                {
+                                    var allText = rawFile.responseText;
+                                    var textLocations = allText.split(/[\s\n]+/);
+
+                                    for (var i = 0; i < textLocations.length-1; i+=3){
+                                        loadedLocations[i + 0] = parseFloat(textLocations[i + 1]);
+                                        loadedLocations[i + 1] = parseFloat(textLocations[i + 0]);
+                                        loadedLocations[i + 2] = parseFloat(textLocations[i + 2]);
+                                    }
+
+                                    locationsloadpost();
+                                }
+                            };
+                            rawFile.send();
+                            
+                            return { //return blank object with done() method
+                                done:function(f){
+                                    postaction=f || postaction; //remember user defined callback functions to be called when images load
+                                }
+                            };
+                        }
+                        
+                        function plantVisibility(){
+                            if(plantVisible){
+                                //customMaterialBillboards.uniforms.scale.value = 500;
+                                customMaterialBillboards.uniforms.billboardTextureAtlas.value = billboardTextureMap;
+                            }
+                        }
+                        
+                        function billboardsVisibility(){
+                            billboardsVisible = !billboardsVisible;
+                        }
+                        
+                        function objectsVisibility(){
+                           objectsVisible = !objectsVisible;
+                           plantVisible = false;
+                           
+                           if(objectsVisible){
+                                //customMaterialBillboards.uniforms.scale.value = scale * 1.0;
+                                customMaterialBillboards.uniforms.billboardTextureAtlas.value = billboardTextures;
+                           }
+                        }
+                        
+                        function terrainsVisibility(){
+                            terrainsVisible = !terrainsVisible;
+                        }
+                        
+                        function linesLODVisibility(){
+                            linesLODVisible = !linesLODVisible;
+                        }
+                        
+			function animate() {
+                                rS( 'frame' ).start();
+                                glS.start();
+                                rS( 'rAF' ).tick();
+                                rS( 'FPS' ).frame();
+                                
+//                                setTimeout( function() {
+                                requestAnimationFrame( animate );
+//                                }, 1000 / 30 );
+                                controls.update( 1 );
+                                render();
+                                
+                                rS( 'frame' ).end();
+				rS( 'rStats' ).start();
+                                rS().update();
+                                rS( 'rStats' ).end();
+
+			}
+
+			function render() {
+                                rS( 'update' ).start();
+                                //ptime = performance.now() % 0.01;
+                                //time = ptime;
+//                                ftime = Math.floor(ptime / .01);
+//                                rem = ptime - ftime;
+//                                
+//                                time = (.01 * (ftime % 2.0)) + rem * (-1.0 * (ftime % 2.0) + 1 * (1-(ftime%2.0))); 
+                                if(overlayStatus && overlayFactor < 0.2){
+                                    overlayFactor += 0.005;
+                                    customMaterialBillboards.uniforms.overlayFactor.value = overlayFactor * 2;
+                                    customMaterialLambert.uniforms.overlayFactor.value = overlayFactor;
+                                }
+                                else if(!overlayStatus && overlayFactor > 0.0){
+                                    overlayFactor -= 0.005;
+                                    customMaterialBillboards.uniforms.overlayFactor.value = overlayFactor * 2;
+                                    customMaterialLambert.uniforms.overlayFactor.value = overlayFactor;
+                                }
+                                
+                                worldCoordinates = new THREE.Vector3();
+                                worldCoordinates.setFromMatrixPosition( this.camera.matrixWorld );
+                                waterMeshFar.material.uniforms.eye.value = worldCoordinates;
+                                waterMeshNear.material.uniforms.eye.value = worldCoordinates;
+//                                waterMeshFar.material.uniforms.time.value = time;
+//                                waterMeshNear.material.uniforms.time.value = time;
+                                frustum.setFromMatrix( new THREE.Matrix4().multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse ) );
+                                
+                                children = [];
+                                childrenNew = [];
+                                if(lookat){
+                                    camera.lookAt(new THREE.Vector3(0,0,0));
+                                }
+                                camPos.x = camera.position.x;
+                                camPos.y = camera.position.z;
+                                maxDist = (thresholdNear * offsetLOD + transitionZone) * 2;
+                                maxDistBillboard = (thresholdBillboard + transitionZoneBillboards) * 2;
+                                objectBox.setFromCenterAndSize(camPos, new THREE.Vector2(maxDist,maxDist));
+                                billboardBox.setFromCenterAndSize(camPos, new THREE.Vector2(maxDistBillboard,maxDistBillboard));
+                                children[0] = true;
+                                
+                                if(dirLight.shadowCamera){
+                                    dirLight.target.position.set( camera.position.x, 0, camera.position.z );
+                                    dirLight.position.x = camera.position.x;
+                                    dirLight.position.z = camera.position.z;
+                                }
+                                
+                                for (var l = 0; l < levelsLOD; l++){
+                                    if(l < levelsLOD-1){
+                                        childrenNew = [];
+                                        for (var i = 0; i < terrains[l].length; i++){
+                                            if( children[i] ) {
+                                                objectRange = objectBox.isIntersectionBox(terrainBoxes[l][i]);
+                                                billboardRange = billboardBox.isIntersectionBox(terrainBoxes[l][i]);
+                                                bboxT = terrains[l][i].geometry.boundingBox;
+                                                frustT = frustum.containsBox( bboxT, offsetFrustum );
+                                                if (frustT === 0 && !objectRange && !billboardRange){
+                                                    terrains[l][i].visible = terrainsVisible && true;
+                                                    linesLOD[l][i].visible = linesLODVisible && true;
+                                                    billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && false;
+                                                    childrenNew[i*4 + 0] = false;
+                                                    childrenNew[i*4 + 1] = false;
+                                                    childrenNew[i*4 + 2] = false;
+                                                    childrenNew[i*4 + 3] = false;
+                                                }
+                                                else if (frustT === 0 && !objectRange && billboardRange){
+                                                    terrains[l][i].visible = terrainsVisible && true;
+                                                    linesLOD[l][i].visible = linesLODVisible && true;
+                                                    billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
+                                                    childrenNew[i*4 + 0] = false;
+                                                    childrenNew[i*4 + 1] = false;
+                                                    childrenNew[i*4 + 2] = false;
+                                                    childrenNew[i*4 + 3] = false;
+                                                }
+                                                else if(frustT === 6){
+                                                    terrains[l][i].visible = false;
+                                                    linesLOD[l][i].visible = false;
+                                                    billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                    childrenNew[i*4 + 0] = false;
+                                                    childrenNew[i*4 + 1] = false;
+                                                    childrenNew[i*4 + 2] = false;
+                                                    childrenNew[i*4 + 3] = false;
+                                                }
+                                                else if(frustT > 0 || !distT){
+                                                    terrains[l][i].visible = false;
+                                                    linesLOD[l][i].visible = false;
+                                                    billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                    childrenNew[i*4 + 0] = true;
+                                                    childrenNew[i*4 + 1] = true;
+                                                    childrenNew[i*4 + 2] = true;
+                                                    childrenNew[i*4 + 3] = true;
+                                                }
+                                            }
+                                            else{
+                                                terrains[l][i].visible = false;
+                                                linesLOD[l][i].visible = false;
+                                                billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                childrenNew[i*4 + 0] = false;
+                                                childrenNew[i*4 + 1] = false;
+                                                childrenNew[i*4 + 2] = false;
+                                                childrenNew[i*4 + 3] = false;
+                                            }
+                                        }
+                                        children = childrenNew;
+                                    }
+                                    else{
+                                        for (var i = 0; i < terrains[l].length; i++){
+                                            if(children[i]){
+                                                frustT = frustum.intersectsObject( terrains[l][i] );
+                                                objectRange = objectBox.isIntersectionBox(terrainBoxes[l][i]);
+                                                dist = terrainBoxes[l][i].distanceToPoint(camPos) < maxDist;
+
+                                                if(frustT && objectRange && dist){
+                                                    terrains[l][i].visible = terrainsVisible && true;
+                                                    terrainObjects[i].visible = terrainsVisible && true;
+                                                    linesLOD[l][i].visible = linesLODVisible && true;
+                                                    objects[terrainToObjectIDs[l][i]].visible = objectsVisible && true;
+                                                    for(var t = 0; t < plantTypes.length; t++){
+                                                        plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = plantVisible && true;
+                                                    }
+                                                    billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
+                                                }
+                                                else if(frustT){
+                                                    terrains[l][i].visible = terrainsVisible && true;
+                                                    linesLOD[l][i].visible = linesLODVisible && true;
+                                                    terrainObjects[i].visible = false;
+                                                    objects[terrainToObjectIDs[l][i]].visible = false;
+                                                    for(var t = 0; t < plantTypes.length; t++){
+                                                        plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
+                                                    }
+                                                    billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
+                                                }
+                                                else{
+                                                    terrains[l][i].visible = false;
+                                                    linesLOD[l][i].visible = false;
+                                                    terrainObjects[i].visible = false;
+                                                    objects[terrainToObjectIDs[l][i]].visible = false;
+                                                    for(var t = 0; t < plantTypes.length; t++){
+                                                        plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
+                                                    }
+                                                    billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                }
+                                            }
+                                            else{
+                                                terrains[l][i].visible = false;
+                                                linesLOD[l][i].visible = false;
+                                                terrainObjects[i].visible = false;
+                                                objects[terrainToObjectIDs[l][i]].visible = false;
+                                                for(var t = 0; t < plantTypes.length; t++){
+                                                    plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
+                                                }
+                                                billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                            }
+                                        }
+                                    }
+                                }
+                                rS( 'update' ).end();
+                                rS( 'render' ).start();
+                                renderer.clear();
+                                if (BLENDING_MODE){
+                                    postprocessing.composerBillboards.render( 0.1 );
+                                    postprocessing.composerObjects.render( 0.1 );
+                                    postprocessing.composerBlending.render ( 0.1 );
+                                    //postprocessing.composerDOF.render( 0.1 );
+                                }
+                                else{
+                                    renderer.render( scene2, camera);
+				    renderer.render( scene, camera );
+                                }
+                                                                
+                                rS( 'render' ).end();                                
+			}
+
+		</script>
+
+	</body>
+</html>
