@@ -1,0 +1,24 @@
+newmtl Limonium_0
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\limoniumFlowerTop.png
+
+newmtl Material_1
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\limoniumFlowerSide.png
+
+newmtl Material_2
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\ColorMaterial_63_74_40.png
+

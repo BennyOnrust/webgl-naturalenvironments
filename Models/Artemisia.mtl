@@ -1,0 +1,32 @@
+newmtl Artemisia_0
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\ArtemisiaLeaf2.png
+
+newmtl Material_1
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\ArtemisiaLeaf1.png
+
+newmtl Material_2
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\ArtemisiaTop.png
+
+newmtl Material_3
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\ArtemisiaStemTexture.png
+

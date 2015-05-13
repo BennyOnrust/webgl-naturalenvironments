@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<!--
+Copyright (c) 2013 Brandon Jones
+
+This software is provided 'as-is', without any express or implied
+warranty. In no event will the authors be held liable for any damages
+arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+    1. The origin of this software must not be misrepresented; you must not
+    claim that you wrote the original software. If you use this software
+    in a product, an acknowledgment in the product documentation would be
+    appreciated but is not required.
+
+    2. Altered source versions must be plainly marked as such, and must not
+    be misrepresented as being the original software.
+
+    3. This notice may not be removed or altered from any source
+    distribution.
+-->
+
+<html>
+    	<head>
+		<title>three.js webgl - geometry - terrain</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #fff;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+
+				background-color: #050505;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+
+			a {
+
+				color: #0080ff;
+			}
+
+		</style>
+	</head>
+        <body>
+
+	<div id="container"></div>
+	<div id="info"><a href="http://threejs.org" target="_blank">three.js</a> - webgl demo<br /></div>
+
+        <script src="build/three_r69.js"></script>
+        <script src="build/rStats.js"></script>
+        <script src="build/rStats.extras.js"></script>
+
+        <script src="js/controls/FirstPersonControls.js"></script>
+        <script src="js/controls/FlyControls.js"></script>
+        <script src="js/controls/TrackballControls.js"></script>
+        <script src="js/controls/OrbitControls.js"></script>
+        <script src="js/loaders/OBJMTLLoader.js"></script>
+        <script src="js/loaders/MTLLoader.js"></script>
+
+	<script src="js/Detector.js"></script>
+        <script>
+            
+            var scale = 10;
+            var container, stats, renderStats;
+            var camera, controls, scene, renderer;
+            
+            init();
+            animate();
+            
+            function init() {
+                container = document.getElementById( 'container' );
+
+                camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 100, 400000 );
+                camera.position.y = 1000+scale*55;
+
+                controls = new THREE.OrbitControls( camera );
+                controls.movementSpeed = 1000;
+                controls.lookSpeed = 0.1;
+                
+                scene = new THREE.Scene();
+
+                // LIGHTS
+                hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.6 );
+                hemiLight.color.setHSL( .6, 1, .6 );
+                hemiLight.groundColor.setHSL( .095, 1 , .75);
+                hemiLight.position.set(0, 500+scale, 0);
+                scene.add( hemiLight );
+
+                dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
+                dirLight.color.setHSL(1,1,.95);
+                dirLight.position.set( -1, 1.75, 1 );
+                dirLight.position.multiplyScalar( scale );
+                scene.add( dirLight );
+                
+                // OBJECT
+                var geom = new THREE.BoxGeometry(2*scale,2*scale,2*scale,1,1,1);
+                geom.computeVertexNormals();
+                var bufferGeom = new THREE.BufferGeometry().fromGeometry(geom);
+                var material = new THREE.MeshPhongMaterial( { color: "red" } );
+                var material1 = new THREE.MeshPhongMaterial( { color: "green" } );
+                var mesh = new THREE.Mesh(bufferGeom, material);
+                
+                bufferGeom.computeBoundingSphere();
+                //scene.add(mesh);
+                
+                var mesh1 = new THREE.Mesh(bufferGeom, material1);
+                mesh1.position.x += 3*scale;
+                var mesh2 = new THREE.Mesh(bufferGeom, material);
+                mesh2.position.x += 6*scale;
+                var mesh3 = new THREE.Mesh(bufferGeom, material1);
+                mesh3.position.x += -3*scale;
+                var mesh4 = new THREE.Mesh(bufferGeom, material);
+                mesh4.position.x += -6*scale;
+                
+                //scene.add(mesh1);
+                //scene.add(mesh2);
+                //scene.add(mesh3);
+                //scene.add(mesh4);
+                
+                var instancingMaterial = new THREE.ShaderMaterial( 
+                {
+                    uniforms: THREE.UniformsUtils.merge( [
+
+                            THREE.UniformsLib[ "common" ],
+                            THREE.UniformsLib[ "bump" ],
+                            THREE.UniformsLib[ "normalmap" ],
+                            THREE.UniformsLib[ "fog" ],
+                            THREE.UniformsLib[ "lights" ],
+                            THREE.UniformsLib[ "shadowmap" ],
+
+                            {
+                                    "ambient"  : { type: "c", value: new THREE.Color( 0xffffff ) },
+                                    "emissive" : { type: "c", value: new THREE.Color( 0x000000 ) },
+                                    "specular" : { type: "c", value: new THREE.Color( 0x111111 ) },
+                                    "shininess": { type: "f", value: 30 },
+                                    "wrapRGB"  : { type: "v3", value: new THREE.Vector3( 1, 1, 1 ) },
+                                    "instancePos" : {type: "v3", value: new THREE.Vector3( 0, 0, 0)},
+                                    "instanceCol" : {type: "v3", value: new THREE.Vector3( 0, 0, 0)}
+                            }
+
+                    ] ),
+                    
+                    attributes: {
+                                    "positionInstances"  : { type: "v3", value: [] },
+                                    "colorInstances"  : { type: "v3", value: [] }
+                            },
+
+                    vertexShader: [
+
+                            "#define PHONG",
+
+                            "varying vec3 vViewPosition;",
+                            "varying vec3 vNormal;",
+                            "uniform vec3 instancePos;",
+                            "attribute vec3 positionInstances;",
+                            "attribute vec3 colorInstances;",
+
+                            THREE.ShaderChunk[ "map_pars_vertex" ],
+                            THREE.ShaderChunk[ "lightmap_pars_vertex" ],
+                            THREE.ShaderChunk[ "envmap_pars_vertex" ],
+                            THREE.ShaderChunk[ "lights_phong_pars_vertex" ],
+                            THREE.ShaderChunk[ "color_pars_vertex" ],
+                            THREE.ShaderChunk[ "morphtarget_pars_vertex" ],
+                            THREE.ShaderChunk[ "skinning_pars_vertex" ],
+                            THREE.ShaderChunk[ "shadowmap_pars_vertex" ],
+                            THREE.ShaderChunk[ "logdepthbuf_pars_vertex" ],
+
+                            "void main() {",
+
+                                    THREE.ShaderChunk[ "map_vertex" ],
+                                    THREE.ShaderChunk[ "lightmap_vertex" ],
+                                    THREE.ShaderChunk[ "color_vertex" ],
+                            "	vColor = colorInstances;",
+
+                                    THREE.ShaderChunk[ "morphnormal_vertex" ],
+                                    THREE.ShaderChunk[ "skinbase_vertex" ],
+                                    THREE.ShaderChunk[ "skinnormal_vertex" ],
+                                    THREE.ShaderChunk[ "defaultnormal_vertex" ],
+
+                            "	vNormal = normalize( transformedNormal );",
+
+                                    THREE.ShaderChunk[ "morphtarget_vertex" ],
+                                    THREE.ShaderChunk[ "skinning_vertex" ],
+                                    THREE.ShaderChunk[ "default_vertex" ],
+                                    THREE.ShaderChunk[ "logdepthbuf_vertex" ],
+
+                            "	vViewPosition = -mvPosition.xyz;",
+
+                                    THREE.ShaderChunk[ "worldpos_vertex" ],
+                            "   worldPosition += vec4(positionInstances, 0.0);",
+                                    THREE.ShaderChunk[ "envmap_vertex" ],
+                                    THREE.ShaderChunk[ "lights_phong_vertex" ],
+                                    THREE.ShaderChunk[ "shadowmap_vertex" ],
+                            "   gl_Position = projectionMatrix * modelViewMatrix * worldPosition;",
+
+                            "}"
+
+                    ].join("\n"),
+
+                    fragmentShader: [
+
+                            "#define PHONG",
+
+                            "uniform vec3 diffuse;",
+                            "uniform float opacity;",
+
+                            "uniform vec3 ambient;",
+                            "uniform vec3 emissive;",
+                            "uniform vec3 specular;",
+                            "uniform float shininess;",
+
+                            THREE.ShaderChunk[ "color_pars_fragment" ],
+                            THREE.ShaderChunk[ "map_pars_fragment" ],
+                            THREE.ShaderChunk[ "alphamap_pars_fragment" ],
+                            THREE.ShaderChunk[ "lightmap_pars_fragment" ],
+                            THREE.ShaderChunk[ "envmap_pars_fragment" ],
+                            THREE.ShaderChunk[ "fog_pars_fragment" ],
+                            THREE.ShaderChunk[ "lights_phong_pars_fragment" ],
+                            THREE.ShaderChunk[ "shadowmap_pars_fragment" ],
+                            THREE.ShaderChunk[ "bumpmap_pars_fragment" ],
+                            THREE.ShaderChunk[ "normalmap_pars_fragment" ],
+                            THREE.ShaderChunk[ "specularmap_pars_fragment" ],
+                            THREE.ShaderChunk[ "logdepthbuf_pars_fragment" ],
+
+                            "void main() {",
+
+                            "	gl_FragColor = vec4( vec3( 1.0 ), opacity );",
+
+                                    THREE.ShaderChunk[ "logdepthbuf_fragment" ],
+                                    THREE.ShaderChunk[ "map_fragment" ],
+                                    THREE.ShaderChunk[ "alphamap_fragment" ],
+                                    THREE.ShaderChunk[ "alphatest_fragment" ],
+                                    THREE.ShaderChunk[ "specularmap_fragment" ],
+
+                                    THREE.ShaderChunk[ "lights_phong_fragment" ],
+
+                                    THREE.ShaderChunk[ "lightmap_fragment" ],
+                                    THREE.ShaderChunk[ "color_fragment" ],
+                                    THREE.ShaderChunk[ "envmap_fragment" ],
+                                    THREE.ShaderChunk[ "shadowmap_fragment" ],
+
+                                    THREE.ShaderChunk[ "linear_to_gamma_fragment" ],
+
+                                    THREE.ShaderChunk[ "fog_fragment" ],
+
+                            "}"
+
+                    ].join("\n"),
+                    lights: true
+                });
+                
+                var bufferGeomInstance = new THREE.BufferGeometry().fromGeometry(geom);
+
+                var numberOfInstances = 100;
+                var positionsInstances = new Float32Array(numberOfInstances*3);
+                for(var i = 0; i < numberOfInstances; i++){
+                    positionsInstances[i*3+0] = (i*3-6) * scale;
+                    positionsInstances[i*3+1] = 0;
+                    positionsInstances[i*3+2] = -3*scale;
+                }
+                
+                var c = new THREE.Color();
+                var colors = new Float32Array(numberOfInstances*3);
+                for(var i = 0; i < numberOfInstances; i++){
+                        c.setRGB(Math.random(),Math.random(),Math.random());
+                        colors[i*3 + 0] = c.r;
+                        colors[i*3 + 1] = c.g;
+                        colors[i*3 + 2] = c.b;
+                }
+                
+                bufferGeomInstance.addAttribute('positionInstances', new THREE.BufferAttribute(positionsInstances,3));
+                bufferGeomInstance.addAttribute('colorInstances',new THREE.BufferAttribute(colors,3));
+                
+                instancingMaterial.vertexColors = THREE.VertexColors;
+                //instancingMaterial.uniforms.instancePos.value = new THREE.Vector3(positionsInstances[0],positionsInstances[1],positionsInstances[2]);
+                var meshInstance = new THREE.Mesh(bufferGeomInstance, instancingMaterial);
+                meshInstance.instancing = true;
+                meshInstance.frustumCulled = false;
+                
+                mesh.autoupdate = false;
+                mesh1.autoupdate = false;
+                mesh2.autoupdate = false;
+                mesh3.autoupdate = false;
+                mesh4.autoupdate = false;
+                meshInstance.autoupdate = false;
+                
+                scene.add(meshInstance);
+                
+                                                                
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                container.appendChild( renderer.domElement );
+                renderer.gammaInput = true;
+                renderer.gammaOutput = true;
+                
+                
+                
+
+                // STATS
+                glS = new glStats();
+                tS = new threeStats( renderer );
+
+                rS = new rStats( {
+                    values: {
+                        frame: { caption: 'Total frame time (ms)', average: true },
+                        fps: { caption: 'Framerate (FPS)', average: true },
+                        calls: { caption: 'Calls (three.js)' },
+                        raf: { caption: 'Time since last rAF (ms)',average:true },
+                        rstats: { caption: 'rStats update (ms)' }
+                    },
+                    groups: [
+                        { caption: 'Framerate', values: [ 'fps', 'raf' ],average:true },
+                        { caption: 'Frame Budget', values: [ 'frame', 'update', 'render' ],average:true }
+                    ],
+                    fractions: [
+                        { base: 'frame', steps: [ 'update', 'render' ],average:true }
+                    ],
+                    plugins: [
+                        tS,
+                        glS
+                    ]
+                } );
+
+                //
+                //document.addEventListener( 'keydown', onKeyDown, false );
+                //window.addEventListener( 'resize', onWindowResize, false );
+
+            }
+                
+                function animate() {
+                    requestAnimationFrame( animate );
+                    controls.update( );
+                    render();
+                    //renderInstances();
+                }
+
+                function render() {
+                    renderer.render( scene, camera );
+                }
+
+        </script>
+    </body>
+</html>

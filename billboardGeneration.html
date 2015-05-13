@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+
+<!--
+Copyright (c) 2013 Brandon Jones
+
+This software is provided 'as-is', without any express or implied
+warranty. In no event will the authors be held liable for any damages
+arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+    1. The origin of this software must not be misrepresented; you must not
+    claim that you wrote the original software. If you use this software
+    in a product, an acknowledgment in the product documentation would be
+    appreciated but is not required.
+
+    2. Altered source versions must be plainly marked as such, and must not
+    be misrepresented as being the original software.
+
+    3. This notice may not be removed or altered from any source
+    distribution.
+-->
+
+<html>
+    	<head>
+		<title>three.js webgl - geometry - terrain</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #fff;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+
+				background-color: #050505;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+
+			a {
+
+				color: #0080ff;
+			}
+
+		</style>
+	</head>
+        <body>
+
+	<div id="container"></div>
+	<div id="info"><a href="http://threejs.org" target="_blank">three.js</a> - webgl demo<br /></div>
+
+        <script src="build/three_r69.js"></script>
+        <script src="ShaderLibrary.js"></script>
+        <script src="js/controls/FirstPersonControls.js"></script>
+        <script src="js/controls/FlyControls.js"></script>
+        <script src="js/controls/TrackballControls.js"></script>
+        <script src="js/controls/OrbitControls.js"></script>
+        <script src="js/loaders/OBJMTLLoader.js"></script>
+        <script src="js/loaders/MTLLoader.js"></script>
+
+	<script src="js/Detector.js"></script>
+        <script>
+            
+            var scale = 400;
+            var container, stats, renderStats;
+            var camera, controls, scene, renderer;
+            var selection = -1;
+            var pSelection = -1;
+            var tSelection = -1;
+            
+            var plantTypes = ["Elymus", "Spartina", "Atriplex", "Aster", "Limonium" ,"Artemisia", "Salicornia"];
+            var nTextures = [3, 4, 1, 3, 3, 4, 1];
+            
+            modelElymusObjLink = 'Models/Elymus.obj';
+            modelElymusMtlLink = 'Models/Elymus.mtl';
+            modelSpartinaObjLink = 'Models/Spartina.obj';
+            modelSpartinaMtlLink = 'Models/Spartina.mtl';
+            modelAtriplexObjLink = 'Models/Atriplex.obj';
+            modelAtriplexMtlLink = 'Models/Atriplex.mtl';
+            modelAsterObjLink = 'Models/Aster.obj';
+            modelAsterMtlLink = 'Models/Aster.mtl';
+            modelLimoniumObjLink = 'Models/Limonium.obj';
+            modelLimoniumMtlLink = 'Models/Limonium.mtl';
+            modelArtemisiaObjLink = 'Models/Artemisia.obj';
+            modelArtemisiaMtlLink = 'Models/Artemisia.mtl';
+            modelSalicorniaObjLink = 'Models/Salicornia.obj';
+            modelSalicorniaMtlLink = 'Models/Salicornia.mtl';
+
+            texturesElymusLink = 'Models/Textures/ElymusMap.png';
+            texturesSpartinaLink = 'BillboardModels/Textures/SpartinaMap.png';
+            texturesAtriplexLink = 'Models/Textures/AtriplexMap.png';
+            texturesAsterLink = 'Models/Textures/AsterMap.png';
+            texturesArtemisiaLink = 'Models/Textures/ArtemisiaMap.png';
+            texturesLimoniumLink = 'Models/Textures/LimoniumMap.png';
+            texturesSalicorniaLink = 'Models/Textures/SalicorniaMap.png';
+                            
+           
+            preLoadPlantModel([modelElymusObjLink,modelElymusMtlLink, modelSpartinaObjLink,modelSpartinaMtlLink, modelAtriplexObjLink,modelAtriplexMtlLink, modelAsterObjLink,modelAsterMtlLink, modelLimoniumObjLink,modelLimoniumMtlLink, modelArtemisiaObjLink,modelArtemisiaMtlLink, modelSalicorniaObjLink,modelSalicorniaMtlLink]).done(function(loadedModels){
+                plantModels = loadedModels;
+                init();
+                animate();
+            });
+            
+            function init() {
+                container = document.getElementById( 'container' );
+
+                camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 0.1, 100*scale );
+                camera.position.y = scale*2.5;
+                camera.position.x = -scale*2.5;
+                camera.position.z = scale*1.5;
+
+                controls = new THREE.OrbitControls( camera );
+                controls.movementSpeed = scale;
+                controls.lookSpeed = 0.1;
+                
+                scene = new THREE.Scene();
+
+                // LIGHTS
+                hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.6 );
+                hemiLight.position.set(0, 20 * scale, 0);
+                scene.add( hemiLight );
+
+                dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
+                dirLight.color.setHSL(1,1,.95);
+                dirLight.position.set( 0, 20 * scale, 0);
+                scene.add( dirLight );
+                
+                dirLight.castShadow = true;
+                //dirLight.shadowCameraVisible = true;
+                dirLight.shadowCameraNear = 17 * scale;
+                dirLight.shadowCameraFar = 23 * scale;
+                dirLight.shadowCameraFov = camera.fov;
+
+                dirLight.shadowCameraLeft = -03 * scale; // or whatever value works for the scale of your scene
+                dirLight.shadowCameraRight = 03 * scale;
+                dirLight.shadowCameraTop = 03 * scale;
+                dirLight.shadowCameraBottom = -03 * scale;
+
+                dirLight.shadowBias = -0.0001;
+                dirLight.shadowDarkness = 0.21;
+
+                dirLight.shadowMapWidth = 8184;
+                dirLight.shadowMapHeight = 8184;
+                
+                var materialShadow = new THREE.MeshPhongMaterial({color: "red"});
+                meshShadow = new THREE.Mesh(new THREE.BoxGeometry(scale*1.5,scale*1.5,scale*1.5), materialShadow);
+                meshShadow.position.y = scale * 2 * 1;
+                meshShadow.position.x = 1 * scale;
+                meshShadow.position.z = 1 * scale;
+                //meshShadow.visible = true;
+                //meshShadow.castShadow = true;
+                //scene.add(meshShadow);
+//                dirLight.target = meshShadow;
+                
+                var depthMaterial = new THREE.ShaderMaterial(ShaderLibrary['depthRGBA_instancing']);
+                depthMaterial._shadowPass = true;
+                
+                var objectPosition = [0,0,0];
+                var objectScale = [.125*scale*2.5,.125*scale*2.5,.125*scale*2.5];
+                var objectRotation = [0,0,0];
+                var c = new THREE.Color();
+                c.setRGB(1,1,1);
+                var objectColor = c.toArray();
+                
+                plantModelMaterials = [];
+                plantModelMaterials[0] = THREE.ImageUtils.loadTexture( texturesElymusLink );
+                plantModelMaterials[1] = THREE.ImageUtils.loadTexture( texturesSpartinaLink );
+                plantModelMaterials[2] = THREE.ImageUtils.loadTexture( texturesAtriplexLink );
+                plantModelMaterials[3] = THREE.ImageUtils.loadTexture( texturesAsterLink );
+                plantModelMaterials[4] = THREE.ImageUtils.loadTexture( texturesLimoniumLink );
+                plantModelMaterials[5] = THREE.ImageUtils.loadTexture( texturesArtemisiaLink );
+                plantModelMaterials[6] = THREE.ImageUtils.loadTexture( texturesSalicorniaLink );
+                
+                var instancingDepthMaterials = [];
+                
+                var instancingMaterials = [];
+                var instancingMaterialReference2 = new THREE.ShaderMaterial( ShaderLibrary['instancingTextureMaterial'] );
+                instancingMaterialReference2.uniforms.threshNear.value = scale * 100;
+                instancingMaterialReference2.uniforms.threshFar.value = scale * 200;
+                instancingMaterialReference2.side = THREE.DoubleSide;
+                for(var t =0; t < plantTypes.length; t++){
+                    instancingMaterials[t] = instancingMaterialReference2.clone();
+                    instancingMaterials[t].uniforms.textureMap.value = plantModelMaterials[t];
+                    instancingMaterials[t].uniforms.nTexture.value = nTextures[t];
+                    instancingDepthMaterials[t] = depthMaterial.clone();
+                    instancingDepthMaterials[t].uniforms.textureMap.value = plantModelMaterials[t];
+                    instancingDepthMaterials[t].uniforms.nTexture.value = nTextures[t];
+                }
+                
+                plantModelsGroup = []
+                for(var i = 0; i < plantTypes.length; i++){
+                    var plantModelInstancedGeom = new THREE.BufferGeometry();
+                    plantModelInstancedGeom.addAttribute('position',plantModels[i].geometry.attributes.position);
+                    plantModelInstancedGeom.addAttribute('normal',plantModels[i].geometry.attributes.normal);
+                    plantModelInstancedGeom.addAttribute('uv',plantModels[i].geometry.attributes.uv);
+                    plantModelInstancedGeom.addAttribute( 'textureIndex', plantModels[i].geometry.attributes.textureIndex );
+                    plantModelInstancedGeom.addAttribute( 'positionInstances', new THREE.BufferAttribute( new Float32Array(objectPosition), 3 ) );
+                    plantModelInstancedGeom.addAttribute( 'scaleInstances', new THREE.BufferAttribute(  new Float32Array(objectScale), 3 ) );
+                    plantModelInstancedGeom.addAttribute( 'rotateInstances', new THREE.BufferAttribute(  new Float32Array(objectRotation), 3 ) );
+                    plantModelInstancedGeom.addAttribute( 'colorInstance', new THREE.BufferAttribute(  new Float32Array(objectColor), 3 ) );
+                    plantModelInstancedGeom.attributes.positionInstances.instancing = true;
+                    plantModelInstancedGeom.attributes.scaleInstances.instancing = true;
+                    plantModelInstancedGeom.attributes.rotateInstances.instancing = true;
+                    plantModelInstancedGeom.attributes.colorInstance.instancing = true;
+                    plantModelsGroup[i] = new THREE.Mesh( plantModelInstancedGeom, instancingMaterials[i]);
+                    plantModelsGroup[i].rotation.x = -Math.PI / 2;
+                    plantModelsGroup[i].scale.x *= 1.0;
+                    plantModelsGroup[i].scale.y *= 1.0;
+                    plantModelsGroup[i].scale.z *= 1.0;
+                    plantModelsGroup[i].instancing = true;
+                    plantModelsGroup[i].visible = false;
+                    plantModelsGroup[i].frustumCulled = false;
+                    plantModelsGroup[i].autoupdate = false;
+                    plantModelsGroup[i].updateMatrix();
+                    plantModelsGroup[i].castShadow = true;
+                    plantModelsGroup[i].receiveShadow = true;
+                    plantModelsGroup[i].customDepthMaterial = instancingDepthMaterials[i];
+                    scene.add(plantModelsGroup[i]);
+                }
+                
+                typeSelection();
+                plantSelection();
+                                
+                camera.lookAt(scene.position);
+                
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                container.appendChild( renderer.domElement ); 
+                renderer.gammaInput = true;
+                renderer.gammaOutput = true;
+                //renderer.autoClear = false;
+                renderer.shadowMapEnabled = true;
+		renderer.shadowMapType = THREE.PCFSoftShadowMap;
+                var backgroundcolor = new THREE.Color();
+                backgroundcolor.setRGB(79/255,161/255,82/255);
+                renderer.setClearColor( backgroundcolor, 1);
+                
+                //
+                document.addEventListener( 'keydown', onKeyDown, false );
+                //window.addEventListener( 'resize', onWindowResize, false );
+
+            }
+                
+                function animate() {
+                    requestAnimationFrame( animate );
+                    controls.update( );
+                    render();
+                }
+
+                function render() {
+                    renderer.render( scene, camera );
+                }
+                
+                function onKeyDown ( event ) {
+
+                    switch( event.keyCode ) {
+
+                            case 79: /*O*/  objectSelection(); break;
+                            case 80: /*P*/  plantSelection(); break;
+                            case 84: /*T*/  typeSelection(); break;
+                    }
+
+		};
+                
+                function typeSelection(){
+                    tSelection++;
+                    tSelection %= plantTypes.length;
+                    plantSelection();
+                }
+                
+                function plantSelection(){
+                    pSelection++;
+                    pSelection %= plantModelsGroup.length;
+                    for(var i = 0; i < plantTypes.length; i++){
+                        if(tSelection === i) {
+                            plantModelsGroup[i].visible = true;
+                        }
+                        else{
+                            plantModelsGroup[i].visible = false;
+                        }
+                    }
+                }
+                
+                function preLoadPlantModel(arr){
+                    var loadedModels=[];
+                    var loaded = 0;
+                    var postaction=function(){};
+                    function plantModelsloadpost(object, index){
+                        loadedModels[index] = object;
+                        loaded++;
+                        if((arr.length / 2) === loaded){
+                            postaction(loadedModels); //call postaction and pass in newimages array as parameter\
+                        }
+                    }
+                    for(var i = 0; i < arr.length; i+=2){
+                        var loader = new THREE.OBJMTLLoader();
+                        loader.load( arr[i], arr[i+1], function ( object ) {
+                            var texIndex = 1.0;
+                            var plantModelGeometry = new THREE.BufferGeometry();
+                            plantModelGeometry.addAttribute('position',new THREE.BufferAttribute(new Float32Array(0),3));
+                            plantModelGeometry.addAttribute('normal',new THREE.BufferAttribute(new Float32Array(0),3));
+                            plantModelGeometry.addAttribute('uv',new THREE.BufferAttribute(new Float32Array(0),2));
+                            plantModelGeometry.addAttribute('textureIndex',new THREE.BufferAttribute(new Float32Array(0),1));
+                            object.traverse( function ( child ) {
+                                if(child.material instanceof THREE.MeshPhongMaterial){
+                                    //console.log(child.material.name);
+                                    child.geometry.computeVertexNormals();
+                                    child.geometry = new THREE.BufferGeometry().fromGeometry(child.geometry);
+
+                                    var texIndices = new Float32Array(child.geometry.attributes.position.length / 3);
+                                    for(var t = 0; t < texIndices.length; t++){
+                                        texIndices[t] = texIndex;
+                                    }
+                                    child.geometry.addAttribute('textureIndex',new THREE.BufferAttribute(texIndices,1));
+                                    plantModelGeometry.merge(child.geometry);
+
+                                    texIndex++; 
+                                }
+                            });
+
+                            var plantModel = new THREE.Mesh(plantModelGeometry);
+                            plantModel.rotation.x = -Math.PI / 2;
+                            plantModel.autoupdate = false;
+                            plantModel.updateMatrix();
+                            plantModel.frustumCulled = false;
+                            plantModel.visible = false;
+
+                            var plantIndex = 0;
+                            console.log(object.children[2].material.name);
+                            for(var t = 0; t < plantTypes.length; t++){
+                                if(object.children[2].material.name.indexOf(plantTypes[t]) >= 0){
+                                    plantIndex = t;
+                                    break;
+                                }
+                            }
+
+                            plantModelsloadpost(plantModel, plantIndex);
+                        });
+                    }
+                    return { //return blank object with done() method
+                        done:function(f){
+                            postaction=f || postaction; //remember user defined callback functions to be called when images load
+                        }
+                    };
+                }
+
+        </script>
+    </body>
+</html>

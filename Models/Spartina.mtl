@@ -1,0 +1,32 @@
+newmtl Spartina_0
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\SpartinaLeaf2.png
+
+newmtl Material_1
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\spartinaOld.png
+
+newmtl Material_2
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\spartinaGlume.png
+
+newmtl Material_3
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+illum 1
+Ns 0.000000
+map_Kd Textures\SpartinaStemTexture.png
+
