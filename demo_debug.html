@@ -38,6 +38,8 @@
                 <script src="build/rStats.extras.js"></script>
                 
                 <script src="ShaderLibrary.js"></script>
+                <script src="Terrain.js"></script>
+                <script src="DataManager.js"></script>
 		<script src="js/controls/FirstPersonControls.js"></script>
                 <script src="js/controls/FlyControls.js"></script>
                 <script src="js/controls/TrackballControls.js"></script>
@@ -261,6 +263,8 @@
                         dikeModelTextureLink = "Models/Textures/dykeTilingColor.png";
                         dikeGrassTextureLink = "images/dikegrass.png";
                         waveNormalLink = "images/waternormals.jpg";
+                        
+                        var terrain;
                                                 
                         preloadimages([heightImageLink1,heightImageLink2]).done(function(loadedImages){
                             images = loadedImages;
@@ -278,7 +282,6 @@
                         });
 
 			function init() {
-                            
 				container = document.getElementById( 'container' );
                                 
                                 camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, .06 * scale, scale * 680 );
@@ -312,9 +315,7 @@
                                 renderer.autoClear = false;
                                 renderer.shadowMapEnabled = true;
 				renderer.shadowMapType = THREE.PCFSoftShadowMap;
-                                //renderer.shadowMapType = THREE.PCFShadowMap;
-                                //renderer.shadowMapType = THREE.BasicShadowMap;
-                                //renderer.devicePixelRatio = 50.0;
+
                                 var pixelWidth = Math.floor( windowWidth  / pixelRatio );
                                 var pixelHeight = Math.floor( windowHeight  / pixelRatio );
                                 var parameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, stencilBuffer: false };
@@ -322,6 +323,9 @@
                                 renderTargetObjects = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, parameters );
                                 renderTargetBillboards = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, parameters );
                                 renderTargetBlend = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false } );
+                                
+                                var terrain = new Terrain();
+                                var dataManager = new DataManager();
                                 
                                 var depthMaterial = new THREE.ShaderMaterial(ShaderLibrary['depthRGBA_instancing']);
                                 depthMaterial._shadowPass = true;
@@ -474,6 +478,12 @@
                                 worldDepth = image.height; 
                                 worldHalfWidth = worldWidth / 2; 
                                 worldHalfDepth = worldDepth / 2;
+                                
+                                dataManager.worldWidth = worldWidth;
+                                dataManager.worldDepth = worldDepth;
+                                dataManager.worldScale = scale;
+                                dataManager.worldHeightScale = heightScale;
+                                
                                 var data = getHeight(image);
                                 var data2 = getHeight(images[1]);
                                 
