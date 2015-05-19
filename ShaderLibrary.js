@@ -1045,29 +1045,18 @@ ShaderLibrary = {
 				"shininess": { type: "f", value: 1.0 },
 				"wrapRGB"  : { type: "v3", value: new THREE.Vector3( 1, 1, 1 ) },
                                 "stoneTexture" : {type: "t", value: null},
-                                "grassTexture" : {type: "t", value: null},
                                 "maxHeight" : {type: "f", value: 1.0},
 			}
 
 		] ),
-                
-                attributes: {
-                  "colorVariance" : {type: "c", value: null },  
-                },
 
 		vertexShader: [
 
 			"#define PHONG",
-                        
-                        "uniform float maxHeight;",
-                        
-                        "attribute vec3 colorVariance;",
-                        
+                                                                        
 			"varying vec3 vViewPosition;",
 			"varying vec3 vNormal;",
 			"varying vec2 vUv;",
-                        "varying float vAmount;",
-                        "varying vec3 vColorVariance;",
                         
 			"void main() {",
 
@@ -1080,11 +1069,7 @@ ShaderLibrary = {
                         "       gl_Position = projectionMatrix * mvPosition;",
 
 			"	vViewPosition = -mvPosition.xyz;",
-
-                        "	vec4 worldPosition = modelMatrix * vec4( position, 1.0 );",
                              
-                        "       vAmount = (position.y / maxHeight);",
-                        "       vColorVariance = colorVariance;",
 			"}"
 
 		].join("\n"),
@@ -1101,10 +1086,8 @@ ShaderLibrary = {
 			"uniform float shininess;",
                         
                         "uniform sampler2D stoneTexture;",
-                        "uniform sampler2D grassTexture;",
                         
                         "varying vec2 vUv;",
-                        "varying float vAmount;",
                         "varying vec3 vColorVariance;",
 
 			THREE.ShaderChunk[ "lights_phong_pars_fragment" ],
@@ -1113,10 +1096,7 @@ ShaderLibrary = {
 
 			"void main() {",
                         "       vec4 stoneColor = texture2D(stoneTexture, vUv * 0.8);",
-                        "       vec4 grassColor = texture2D(grassTexture, vUv * 2.0);",
-                        "       float percentage = clamp(floor(vAmount/2.45),0.0,1.0);",
-			"	gl_FragColor = mix(stoneColor, grassColor, percentage);",
-                        //"       gl_FragColor.xyz = gl_FragColor.xyz * vColorVariance;",
+			"	gl_FragColor = stoneColor;",
 				THREE.ShaderChunk[ "specularmap_fragment" ],
 
 				THREE.ShaderChunk[ "lights_phong_fragment" ],

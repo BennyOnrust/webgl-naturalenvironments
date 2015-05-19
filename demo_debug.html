@@ -41,6 +41,9 @@
                 <script src="Terrain.js"></script>
                 <script src="DataManager.js"></script>
                 <script src="Lights.js"></script>
+                <script src="Skybox.js"></script>
+                <script src="Dike.js"></script>
+                <script src="Water.js"></script>
 		<script src="js/controls/FirstPersonControls.js"></script>
                 <script src="js/controls/FlyControls.js"></script>
                 <script src="js/controls/TrackballControls.js"></script>
@@ -381,110 +384,32 @@
                                 lightsBillboard = new Lights(scale, camera.fov, "billboard");
                                 scene.add(lightsObject);
                                 scene2.add(lightsBillboard);
-
-                                scene2.add(dike);
-                                dike.scale.x *= 1.0;
-                                dike.scale.y *= heightScale * 0.9;
-                                dike.scale.z *= 1.0;
                                 
-                                dike.position.y -= scale*1.5;
-                                dike.position.x += 33 * scale;
-                                dike.position.z -= 10 * scale;
-                                                                
-                                dike.autoupdate = false;
-                                dike.updateMatrix();
+                                // DIKE
+                                var dikeMesh = new Dike(scale, heightScale, dike, dikeTexture);
+                                scene2.add(dikeMesh);                              
                                 
-                                dike.geometry.computeBoundingBox();
+                                // SKYBOX                                
+                                var skybox = new Skybox(scale, skyboxTexture);
+                                scene2.add(skybox);
                                 
-                                dike.material.uniforms.stoneTexture.value = dikeTexture;
-                                dike.material.uniforms.grassTexture.value = dikeGrassTexture;
-                                
-                                
-                                var dikeGeometry = dike.geometry;
-                                var colorVariance = new Float32Array(dikeGeometry.attributes.position.length);
-                                var max = -Infinity;
-                                for(var i = 0; i < dikeGeometry.attributes.position.length; i+=3){
-                                    if (dikeGeometry.attributes.position.array[i+1] > max)
-                                      max = dikeGeometry.attributes.position.array[i+1];
-                                    var cv = .8 + Math.random() * .2;
-                                    colorVariance[i+0] = cv;
-                                    colorVariance[i+1] = cv;
-                                    colorVariance[i+2] = cv;
-                                }
-                                var maxHeight = max;
-                                console.log(maxHeight);
-                                
-                                dike.material.uniforms.maxHeight.value = maxHeight;
-                                dike.geometry.addAttribute("colorVariance", new THREE.BufferAttribute(colorVariance,3));
-                                
-                                var skyboxSize = scale * 560;
-                                
-                                var skyboxGeometry = new THREE.BoxGeometry(skyboxSize-200, skyboxSize+0, skyboxSize+200);
-                                var shader = THREE.ShaderLib[ "cube" ];
-				shader.uniforms[ "tCube" ].value = skyboxTexture;
-
-				var skyboxMaterial = new THREE.ShaderMaterial( {
-
-					fragmentShader: shader.fragmentShader,
-					vertexShader: shader.vertexShader,
-					uniforms: shader.uniforms,
-                                        depthWrite: true,
-					side: THREE.BackSide,
-				} );
-                                var skyboxMesh = new THREE.Mesh(skyboxGeometry, skyboxMaterial);
-                                skyboxMesh.position.x -= 0*scale;
-                                skyboxMesh.position.z += 50*scale;
-                                scene2.add(skyboxMesh);
-                                
-                                // TERRAIN
+                                // WORLD INFORMATION
                                 var image = images[0];
                                 worldWidth = image.width;
                                 worldDepth = image.height; 
                                 worldHalfWidth = worldWidth / 2; 
                                 worldHalfDepth = worldDepth / 2;
                                 
-                                dataManager.worldWidth = worldWidth;
-                                dataManager.worldDepth = worldDepth;
-                                dataManager.worldScale = scale;
-                                dataManager.worldHeightScale = heightScale;
-                                
                                 var data = getHeight(image);
                                 var data2 = getHeight(images[1]);
                                 
-                                var offsetWater = .2;
-                                var waterGeometry = new THREE.PlaneBufferGeometry( worldWidth * scale, worldDepth * scale,Math.ceil(worldWidth * offsetWater),Math.ceil(worldDepth * offsetWater));
-
-                                var waterFarMaterial = new THREE.ShaderMaterial(ShaderLibrary['waterFar']);
-                                waterFarMaterial.uniforms.sunDirection.value = lightsObject.hemiLight.position.clone().normalize();
-                                waterFarMaterial.uniforms.normalSampler.value = waveNormal;
-                                waterFarMaterial.uniforms.mirrorSampler.value = skyboxTexture;
-				waterFarMaterial.uniforms.sunColor.value = new THREE.Color(0xffffff);
-				waterFarMaterial.uniforms.waterColor.value = new THREE.Color(0x001e0f);
-				waterFarMaterial.uniforms.distortionScale.value = 500.0;
-                                waterMeshFar = new THREE.Mesh(waterGeometry, waterFarMaterial);
-                                scene2.add(waterMeshFar);
-                                waterMeshFar.rotation.x = - Math.PI * 0.5;
-                                waterMeshFar.position.y = scale * heightScale * 0.36;
-                                waterMeshFar.autoupdate = false;
-                                waterMeshFar.updateMatrix();
-                                waterMeshFar.visible = waterVisible;
+                                // Water
+                                waterObject = new Water(scale, worldWidth, worldDepth, heightScale, 0.2, lightsObject.hemiLight.position, waveNormal, skyboxTexture, "object");
+                                waterBillboard = new Water(scale, worldWidth, worldDepth, heightScale, 0.2, lightsObject.hemiLight.position, waveNormal, skyboxTexture, "billboard");
+                                scene.add(waterObject);
+                                scene2.add(waterBillboard);                               
                                 
-                                var waterNearMaterial = new THREE.ShaderMaterial(ShaderLibrary['waterNear']);
-                                waterNearMaterial.uniforms.sunDirection.value = lightsObject.hemiLight.position.clone().normalize();
-                                waterNearMaterial.uniforms.normalSampler.value = waveNormal;
-                                waterNearMaterial.uniforms.mirrorSampler.value = skyboxTexture;
-				waterNearMaterial.uniforms.sunColor.value = new THREE.Color(0xffffff);
-				waterNearMaterial.uniforms.waterColor.value = new THREE.Color(0x001e0f);
-				waterNearMaterial.uniforms.distortionScale.value = 500.0;
-                                waterMeshNear = new THREE.Mesh(waterGeometry, waterNearMaterial);
-                                scene.add(waterMeshNear);
-                                waterMeshNear.rotation.x = - Math.PI * 0.5;
-                                waterMeshNear.position.y = scale * heightScale * 0.36;
-                                waterMeshNear.autoupdate = false;
-                                waterMeshNear.updateMatrix();
-                                waterMeshNear.visible = waterVisible;
-                                
-                                
+                                // TERRAIN
                                 var quads = [];
                                 var quadIndex = 0;
                                 var width = scale * worldWidth; 
@@ -941,7 +866,6 @@
                                 linesLOD = [];
                                 terrainToObjectIDs = [];
                                 for (var l = 0; l < levelsLOD; l++){
-                                    //console.log("Level of Detail: " + l);
                                     terrains[l] = [];
                                     linesLOD[l] = [];
                                     centerTerrains[l] = [];
@@ -968,9 +892,7 @@
                                     
                                     threshT[l] = Math.sqrt(tileSizeX*tileSizeX + tileSizeY*tileSizeY) * scale;
                                     threshT2[l] = threshT[l] * 2.0;
-                                    //console.log("Number of parents: " + nParents);
                                     for(var q = 0; q < nParents; q++) {
-                                        //console.log("Parent: " + q);
                                         if(l !== 0){
                                             parent = terrains[l-1][q];
                                         }
@@ -1026,7 +948,6 @@
                                                 }
                                                 
                                                 terrains[l][tid] = generateTerrainQuad(width,depth,totWidth,totDepth,parent, customMaterialLambert);
-                                                //scene.add( terrains[l][tid] );
                                                 scene2.add( terrains[l][tid] );
 
                                                 linesLOD[l][tid] = drawLines(terrains[l][tid]);
@@ -1085,11 +1006,11 @@
                                 customMaterialLambert.uniforms.environmentCube.value = skyboxTexture;
                                 customMaterialLambert.uniforms.overlayFactor.value = overlayFactor;
                                 
-                                waterMeshNear.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                waterMeshNear.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                waterObject.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterObject.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                                 
-                                waterMeshFar.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                waterMeshFar.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                waterBillboard.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterBillboard.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                                 
                                 var offsetX = terrains[levelsLOD-1][0].geometry.boundingBox.size().x;
                                 var offsetZ = terrains[levelsLOD-1][0].geometry.boundingBox.size().z;
@@ -1322,7 +1243,6 @@
                                 customMaterialBillboards.sizeAttenuation = true;
                                 customMaterialBillboards.uniforms.nTypes.value = 3;
                                 customMaterialBillboards.uniforms.overlayFactor.value = overlayFactor;
-                                //customMaterialBillboards.blending =  THREE.NoBlending;
                                 for( var l = 0; l < levelsLOD; l++){
                                     billboards[l] = [];
                                     for(var i = 0; i < objectPositionMerged[l].length; i++){
@@ -1345,9 +1265,7 @@
                                 console.log("Billboard creation finished");
                                 
                                 console.log("Instance object creation");
-                               
-                                //instancingMaterialPhong2 = new THREE.ShaderMaterial(ShaderLibrary['instancingTextureMaterial']);
-                                //instancingMaterialPhong2.transparent = true;
+
                                 // Load plant MESH
                                 instancingMaterials = [];
                                 instancingDepthMaterials = [];
@@ -1529,9 +1447,8 @@
                                         case 84: /*T*/  controls.movementSpeed += 0.025 * scale; break;
                                         case 73: /*I*/  increaseLOD(); break;
                                         case 74: /*J*/  decreaseLOD(); break;                                        
-                                        case 75: /*K*/  waterVisible = !waterVisible; waterMeshNear.visible = waterVisible; waterMeshFar.visible = waterVisible; break;
+                                        case 75: /*K*/  waterVisible = !waterVisible; waterObject.visible = waterVisible; waterBillboard.visible = waterVisible; break;
                                         case 77: /*M*/  toggleShadow(); break; 
-                                        //case 85: /*U*/  linesLODVisibility(); break;
                                         case 85: /*U*/  controls.autoForward = !controls.autoForward; break;
                                         case 86: /*V*/  BLENDING_MODE = !BLENDING_MODE; break;
                                         case 67: /*C*/  plantVisible = !plantVisible; if(plantVisible) plantVisibility(); objectsVisible = false; break;
@@ -1580,11 +1497,11 @@
                             customMaterialLambert.uniforms.threshNear.value = thresholdNear * offsetLOD;
                             customMaterialLambert.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                             
-                            waterMeshNear.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                            waterMeshNear.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            waterObject.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            waterObject.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
 
-                            waterMeshFar.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                            waterMeshFar.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            waterBillboard.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            waterBillboard.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                         }
                         
                         function decreaseLOD(){
@@ -1604,11 +1521,11 @@
                                 customMaterialPhong.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                                 customMaterialLambert.uniforms.threshNear.value = thresholdNear * offsetLOD;
                                 customMaterialLambert.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
-                                waterMeshNear.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                waterMeshNear.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                waterObject.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterObject.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                                 
-                                waterMeshFar.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                waterMeshFar.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                waterBillboard.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterBillboard.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                             }
                         }
                         
@@ -2047,10 +1964,9 @@
                                 
                                 worldCoordinates = new THREE.Vector3();
                                 worldCoordinates.setFromMatrixPosition( this.camera.matrixWorld );
-                                waterMeshFar.material.uniforms.eye.value = worldCoordinates;
-                                waterMeshNear.material.uniforms.eye.value = worldCoordinates;
-//                                waterMeshFar.material.uniforms.time.value = time;
-//                                waterMeshNear.material.uniforms.time.value = time;
+                                waterObject.waterMesh.material.uniforms.eye.value = worldCoordinates;
+                                waterBillboard.waterMesh.material.uniforms.eye.value = worldCoordinates;
+
                                 frustum.setFromMatrix( new THREE.Matrix4().multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse ) );
                                 
                                 children = [];
