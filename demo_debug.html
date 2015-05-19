@@ -118,9 +118,7 @@
                         var plantTypes = ["Elymus", "Spartina", "Atriplex", "Aster", "Limonium" ,"Artemisia", "Salicornia"];
                         var plantBillboardScales = [0,0,0,0,0,0,0];
                         var plantBillboardSizes = [1000,1000,430,600,270,550,250];
-                        //var plantModelSizes = [0.3*scale,0.3*scale,0.2*scale,0.23*scale,0.15*scale,0.3*scale,0.3*scale];
                         var nTextures = [3, 4, 1, 3, 3, 4, 1];
-                        var plantColorsLOD = [new THREE.Vector3(80/255,131/255,88/255), new THREE.Vector3(56/255,115/255,37/255), new THREE.Vector3(98/255,164/255,90/255),new THREE.Vector3(183/255,193/255,181/255),new THREE.Vector3(185/255,112/255,159/255),new THREE.Vector3(173/255,236/255,225/255),new THREE.Vector3(1,1,1)];
                         
                         var terrainmesh;
                         var heightImageLink1, heightImageLink2;
@@ -599,8 +597,6 @@
                                     var billboardPos = new Float32Array( locBlock.length * 3);
                                     var billboardSize = new Float32Array( locBlock.length );
                                     var colorRandom = new Float32Array( locBlock.length * 3);
-                                    var billboardCol = new Float32Array( locBlock.length * 3);
-                                    var billboardScale = new Float32Array( locBlock.length );
                                     var billboardTN = new Float32Array( locBlock.length);
 
                                     for (var j = 0; j < locBlock.length; j++) {
@@ -773,12 +769,6 @@
                                         billboardPos[j*3 + 1] = ypos+ Math.sqrt(billboardSize[j]*.5) * .024;
                                         billboardPos[j*3 + 2] = (zpos - worldHalfDepth) * scale;
                                         
-                                        billboardCol[j*3 + 0] = plantColorsLOD[t-1].x;
-                                        billboardCol[j*3 + 1] = plantColorsLOD[t-1].y;
-                                        billboardCol[j*3 + 2] = plantColorsLOD[t-1].z;
-                                        
-                                        billboardScale[j] = plantBillboardScales[t-1];
-                                        
                                         billboardTN[j] = Math.floor(Math.random() * 4);
                                         
                                         var vi;
@@ -825,8 +815,6 @@
                                     billboardPositions[i] = billboardPos;
                                     billboardSizes[i] = billboardSize;
                                     objectColorRandom[i] = colorRandom;
-                                    billboardColorLOD[i] = billboardCol;
-                                    billboardScales[i] = billboardScale;
                                     billboardTextureNumber[i] = billboardTN;
                                 }
                                 
@@ -1124,18 +1112,6 @@
                                             objectColorRandomMerged[i-1][index].set(objectColorRandomMerged[i][nx + (ny+1) * nWidth],length0 + length1);
                                             objectColorRandomMerged[i-1][index].set(objectColorRandomMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
                                             
-                                            billboardColorLODMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
-                                            billboardColorLODMerged[i-1][index].set(billboardColorLODMerged[i][nx + ny * nWidth],0);
-                                            billboardColorLODMerged[i-1][index].set(billboardColorLODMerged[i][(nx + 1) + ny * nWidth],length0);
-                                            billboardColorLODMerged[i-1][index].set(billboardColorLODMerged[i][nx + (ny+1) * nWidth],length0 + length1);
-                                            billboardColorLODMerged[i-1][index].set(billboardColorLODMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
-                                            
-                                            billboardScalesMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
-                                            billboardScalesMerged[i-1][index].set(billboardScalesMerged[i][nx + ny * nWidth],0);
-                                            billboardScalesMerged[i-1][index].set(billboardScalesMerged[i][(nx + 1) + ny * nWidth],length0/3);
-                                            billboardScalesMerged[i-1][index].set(billboardScalesMerged[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
-                                            billboardScalesMerged[i-1][index].set(billboardScalesMerged[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
-                                            
                                             billboardTextureNumberMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
                                             billboardTextureNumberMerged[i-1][index].set(billboardTextureNumberMerged[i][nx + ny * nWidth],0);
                                             billboardTextureNumberMerged[i-1][index].set(billboardTextureNumberMerged[i][(nx + 1) + ny * nWidth],length0/3);
@@ -1234,7 +1210,6 @@
                                 billboardTextureMap.anisotropy = 1;
                                 billboardTextureMap.generateMipmaps = true;
                                 
-                                //customMaterialBillboards.uniforms.scale.value = 500;
                                 customMaterialBillboards.uniforms.billboardTextureAtlas.value = billboardTextureMap;
                                 customMaterialBillboards.uniforms.threshNear.value = thresholdNear * offsetLOD;
                                 customMaterialBillboards.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
@@ -1251,8 +1226,6 @@
                                         _particleGeom.addAttribute( 'colorInstance', new THREE.BufferAttribute( objectColorRandomMerged[l][i], 3 ) );
                                         _particleGeom.addAttribute( 'plantType', new THREE.BufferAttribute( objectPlantTypeMerged[l][i], 1 ) );
                                         _particleGeom.addAttribute( 'size', new THREE.BufferAttribute( billboardSizesMerged[l][i], 1 ) );
-                                        _particleGeom.addAttribute( 'scale', new THREE.BufferAttribute( billboardScalesMerged[l][i], 1 ) );
-                                        _particleGeom.addAttribute( 'colorLOD', new THREE.BufferAttribute( billboardColorLODMerged[l][i], 3 ) );
                                         _particleGeom.addAttribute( 'textureNumber', new THREE.BufferAttribute( billboardTextureNumberMerged[l][i], 1 ) );
                                         billboards[l][i] = new THREE.PointCloud( _particleGeom, customMaterialBillboards );
                                         billboards[l][i].frustumCulled = false;
