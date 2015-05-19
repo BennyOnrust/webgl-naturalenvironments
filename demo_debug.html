@@ -85,14 +85,13 @@
 				document.getElementById( 'container' ).innerHTML = "";
 
 			}
-			var container, stats, scene2, scene3, renderStats;
+			var container, stats, scene, scene2, renderStats;
 
-			var camera, controls, scene, renderer;
+			var camera, controls, renderer;
                         
-                        var renderTargetObjects, renderTargetBillboards, renderTargetTerrain;
+                        var renderTargetObjects, renderTargetBillboards;
 
-			var worldWidth, worldDepth, worldHalfWidth, worldHalfDepth;
-                        var dirLight, hemiLight;
+			var worldWidth, worldDepth;
 
 			var clock = new THREE.Clock();
                         var pNumber = 0;
@@ -100,9 +99,8 @@
                         var billboards, objects, terrains, terrainObjects, plantModels;
                         var plantModelMaterials = [];
 
-                        var limonium, spartina;
                         var scale = 2;
-                        var group, images;
+                        var images;
                         var frustum = new THREE.Frustum();
                         var billboardsVisible = true;
                         var objectsVisible = false;
@@ -116,18 +114,11 @@
                         var overlayFactor = 0.0;
                         
                         var plantTypes = ["Elymus", "Spartina", "Atriplex", "Aster", "Limonium" ,"Artemisia", "Salicornia"];
-                        var plantBillboardScales = [0,0,0,0,0,0,0];
                         var plantBillboardSizes = [1000,1000,430,600,270,550,250];
                         var nTextures = [3, 4, 1, 3, 3, 4, 1];
                         
-                        var terrainmesh;
-                        var heightImageLink1, heightImageLink2;
-                        var mudImageLink, grassImageLink, waterImageLink;
-                        var locationsTextLink;
-                        var modelGeometryLink,modelMaterialLink,modelSpartinaObjLink, modelSpartinaMatLink;
                         var materialLines = new THREE.LineBasicMaterial({ color: "red" });
-                        var offsetFrustum = 0;
-                        var billboardsLink;
+                        var offsetFrustum;
                         
                         var children = [];
                         var childrenNew = [];
@@ -147,7 +138,6 @@
                         var thresholdNear;
                         var thresholdFar;
                         var transitionZone = scale * 12.0;
-                        var sky;
                         var dike;
                         var speed = 0.5 * scale;
                         var lookat = false;
@@ -167,7 +157,6 @@
                         var transitionZoneBillboards = 35 * scale;
                         var offsetLODTerrain = 0.3;
                         var worldCoordinates;
-                        var time = 0.0;
                         
                         var quality = 0.0;
                         var qualityMultiplier;
@@ -395,8 +384,6 @@
                                 var image = images[0];
                                 worldWidth = image.width;
                                 worldDepth = image.height; 
-                                worldHalfWidth = worldWidth / 2; 
-                                worldHalfDepth = worldDepth / 2;
                                 
                                 var data = getHeight(image);
                                 var data2 = getHeight(images[1]);
@@ -416,8 +403,8 @@
                                 var heightSegments = worldDepth-1;
                                 var geometry = new THREE.BufferGeometry();
 
-                                var width_half = scale*worldHalfWidth;
-                                var height_half = scale*worldHalfDepth;
+                                var width_half = scale*(worldWidth / 2);
+                                var height_half = scale*(worldDepth / 2);
 
                                 var gridX = widthSegments || 1;
                                 var gridY = heightSegments || 1;
@@ -534,7 +521,7 @@
                                 customMaterialPhong = new THREE.ShaderMaterial( ShaderLibrary['terrainPhongNear']  );
                                 customMaterialLambert = new THREE.ShaderMaterial( ShaderLibrary['terrainPhongFar']  );
                                 
-                                terrainmesh = new THREE.Mesh(geometry, customMaterialPhong);
+                                var terrainmesh = new THREE.Mesh(geometry, customMaterialPhong);
                                 terrainmesh.visible = false;
                                 
                                 // Calculate positions
@@ -750,9 +737,9 @@
                                         
                                         types[j] = t-1;
                                         
-                                        pos[ j * 3 + 0 ] = (xpos - worldHalfWidth) * scale;
+                                        pos[ j * 3 + 0 ] = (xpos - worldWidth/2) * scale;
                                         pos[ j * 3 + 1 ] = ypos + scales[j * 3 + 1] * .0; //I only take into account the random scales but not the initial scale of each plant (for cubes I do)
-                                        pos[ j * 3 + 2 ] = (zpos - worldHalfDepth) * scale;
+                                        pos[ j * 3 + 2 ] = (zpos - worldDepth/2) * scale;
                                         var rotMat = new THREE.Matrix4();
                                         var scaleMat = new THREE.Matrix4();
                                         var transMat = new THREE.Matrix4();
@@ -765,9 +752,9 @@
                                         tm.multiply(rotMat);
                                         tm.multiply(scaleMat);
                                         
-                                        billboardPos[j*3 + 0] = (xpos - worldHalfWidth) * scale;
+                                        billboardPos[j*3 + 0] = (xpos - worldWidth/2) * scale;
                                         billboardPos[j*3 + 1] = ypos+ Math.sqrt(billboardSize[j]*.5) * .024;
-                                        billboardPos[j*3 + 2] = (zpos - worldHalfDepth) * scale;
+                                        billboardPos[j*3 + 2] = (zpos - worldDepth/2) * scale;
                                         
                                         billboardTN[j] = Math.floor(Math.random() * 4);
                                         
@@ -952,8 +939,8 @@
 
                                                 var tMinScaledX = terrainMinimum.x / scale;
                                                 var tMinScaledZ = terrainMinimum.z / scale;
-                                                tMinScaledX += worldHalfWidth;
-                                                tMinScaledZ += worldHalfDepth;
+                                                tMinScaledX += worldWidth/2;
+                                                tMinScaledZ += worldDepth/2;
                                                 
                                                 var nxn = tMinScaledX / tileSizeX;
                                                 var nyn = tMinScaledZ / tileSizeY;
@@ -1918,12 +1905,7 @@
 
 			function render() {
                                 rS( 'update' ).start();
-                                //ptime = performance.now() % 0.01;
-                                //time = ptime;
-//                                ftime = Math.floor(ptime / .01);
-//                                rem = ptime - ftime;
-//                                
-//                                time = (.01 * (ftime % 2.0)) + rem * (-1.0 * (ftime % 2.0) + 1 * (1-(ftime%2.0))); 
+
                                 if(overlayStatus && overlayFactor < 0.2){
                                     overlayFactor += 0.005;
                                     customMaterialBillboards.uniforms.overlayFactor.value = overlayFactor * 2;
