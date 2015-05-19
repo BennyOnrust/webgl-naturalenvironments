@@ -21,7 +21,8 @@ DataManager.prototype = {
     transitionZoneBillboards: 1,
     cameraSpeed: 1,
     
-    
+    sceneObject: null,
+    sceneBillboard: null,
 }
 
 

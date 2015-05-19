@@ -377,11 +377,42 @@
                                 skyboxTexture.mapping = THREE.CubeReflectionMapping;
                                 
                                 // LIGHTS
-                                lightsObject = new Lights(scale, camera.fov, "object");
-                                lightsBillboard = new Lights(scale, camera.fov, "billboard");
-                                scene.add(lightsObject);
-                                scene2.add(lightsBillboard);
+                                var lightsObject = new Lights(scale, camera.fov, "object");
+                                var lightsBillboard = new Lights(scale, camera.fov, "billboard");
+                                
+                                hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.6 );
+                                hemiLight.position.set(1, 1600 * scale, 1);
+				scene.add( hemiLight );
+                                scene2.add( hemiLight.clone() );
 
+				dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
+                                dirLight.color.setHSL(1,1,.95);
+                                dirLight.position.set( 0, 20 * scale, 0);
+                                
+                                scene.add( dirLight );
+                                scene2.add( dirLight.clone() );                                                                                                
+                                dirLight.castShadow = true;
+                                
+                                dirLight.shadowCameraNear = 12 * scale;
+				dirLight.shadowCameraFar = 30 * scale;
+				dirLight.shadowCameraFov = camera.fov;
+                                
+                                dirLight.shadowCameraLeft = -38 * scale;
+                                dirLight.shadowCameraRight = 38 * scale;
+                                dirLight.shadowCameraTop = 38 * scale;
+                                dirLight.shadowCameraBottom = -38 * scale;
+
+				dirLight.shadowBias = -0.001;
+				dirLight.shadowDarkness = 0.21;
+
+				dirLight.shadowMapWidth = 2048;// 8184
+				dirLight.shadowMapHeight = 2048;// 8184
+                                
+                                var meshShadow = new THREE.Mesh(new THREE.BoxGeometry(scale*1.5,scale*1.5,scale*1.5));
+                                meshShadow.visible = false;
+                                scene.add(meshShadow);
+                                dirLight.target = meshShadow;                                
+                                
                                 scene2.add(dike);
                                 dike.scale.x *= 1.0;
                                 dike.scale.y *= heightScale * 0.9;
@@ -455,7 +486,7 @@
                                 var waterGeometry = new THREE.PlaneBufferGeometry( worldWidth * scale, worldDepth * scale,Math.ceil(worldWidth * offsetWater),Math.ceil(worldDepth * offsetWater));
 
                                 var waterFarMaterial = new THREE.ShaderMaterial(ShaderLibrary['waterFar']);
-                                waterFarMaterial.uniforms.sunDirection.value = lightsObject.hemiLight.position.clone().normalize();
+                                waterFarMaterial.uniforms.sunDirection.value = hemiLight.position.clone().normalize();
                                 waterFarMaterial.uniforms.normalSampler.value = waveNormal;
                                 waterFarMaterial.uniforms.mirrorSampler.value = skyboxTexture;
 				waterFarMaterial.uniforms.sunColor.value = new THREE.Color(0xffffff);
@@ -470,7 +501,7 @@
                                 waterMeshFar.visible = waterVisible;
                                 
                                 var waterNearMaterial = new THREE.ShaderMaterial(ShaderLibrary['waterNear']);
-                                waterNearMaterial.uniforms.sunDirection.value = lightsObject.hemiLight.position.clone().normalize();
+                                waterNearMaterial.uniforms.sunDirection.value = hemiLight.position.clone().normalize();
                                 waterNearMaterial.uniforms.normalSampler.value = waveNormal;
                                 waterNearMaterial.uniforms.mirrorSampler.value = skyboxTexture;
 				waterNearMaterial.uniforms.sunColor.value = new THREE.Color(0xffffff);
@@ -606,6 +637,7 @@
                                   if (data[i] < min)
                                     min = data[i];
                                 }
+                                //var maxHeight = Math.max.apply(Math,data) * scale * heightScale;
                                 var maxHeight = max * scale * heightScale;
                                 
                                 customMaterialPhong = new THREE.ShaderMaterial( ShaderLibrary['terrainPhongNear']  );
@@ -613,6 +645,9 @@
                                 
                                 terrainmesh = new THREE.Mesh(geometry, customMaterialPhong);
                                 terrainmesh.visible = false;
+                                //wireframe = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({wireframe:true, color: "brown"}));
+                                //scene.add(wireframe);
+                                //scene.add(terrainmesh);
                                 
                                 // Calculate positions
                                 var objectPositions = [];
@@ -1417,6 +1452,7 @@
                                     objectInstancedGeom.addAttribute('position',cubeGeo.attributes.position);
                                     objectInstancedGeom.addAttribute('normal',cubeGeo.attributes.normal);
                                     objectInstancedGeom.addAttribute('uv',cubeGeo.attributes.uv);
+                                    //objectInstancedGeom.addAttribute( 'textureIndex', plantModels[t].geometry.attributes.textureIndex );
                                     objectInstancedGeom.addAttribute( 'positionInstances', new THREE.BufferAttribute( objectPositionMerged[levelsLOD-1][i], 3 ) );
                                     objectInstancedGeom.addAttribute( 'colorInstances', new THREE.BufferAttribute( objectColorsMerged[levelsLOD-1][i], 3 ) );
                                     objectInstancedGeom.addAttribute( 'scaleInstances', new THREE.BufferAttribute( objectScaleMerged[levelsLOD-1][i], 3 ) );
@@ -1441,6 +1477,10 @@
                                 }
                                                                 
                                 console.log("Finished instance object generation");
+                                
+                                //scene.matrixAutoUpdate = false;
+                                //scene2.matrixAutoUpdate = false;
+                                //scene3.matrixAutoUpdate = false;
                                 
                                 var fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
                                 fxaaPass.uniforms.resolution.value = new THREE.Vector2(1/pixelWidth,1/pixelHeight);
@@ -2066,7 +2106,9 @@
                                 billboardBox.setFromCenterAndSize(camPos, new THREE.Vector2(maxDistBillboard,maxDistBillboard));
                                 children[0] = true;
                                 
-                                lightsObject.update(camera.position);
+                                dirLight.target.position.set( camera.position.x, 0, camera.position.z );
+                                dirLight.position.x = camera.position.x;
+                                dirLight.position.z = camera.position.z;
                                 
                                 for (var l = 0; l < levelsLOD; l++){
                                     if(l < levelsLOD-1){
