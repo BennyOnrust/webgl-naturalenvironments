@@ -1,12 +1,13 @@
-Terrain = function() {
-    this.heightData = [];
-    this.heightDataInterpolated = [];
+Terrain = function(worldScale, worldWidth, worldDepth, worldHeightScale, heightData, heightDataInterpolated) {
+    THREE.Object3D.call( this );
+    
+    this.terrainGeometry = this.generateGeometry(worldScale, worldWidth, worldDepth, worldHeightScale, heightData, heightDataInterpolated);
+    this.maxHeight = this.calculateMaxHeight(heightData) * worldScale * worldHeightScale;
 };
 
-Terrain.prototype = {
-    constructor: Terrain,
+Terrain.prototype = Object.create( THREE.Object3D.prototype );
     
-    calculateMaxHeight:function() {
+Terrain.prototype.calculateMaxHeight = function(data) {
         var max = -Infinity; 
         var min = +Infinity;
 
@@ -16,21 +17,20 @@ Terrain.prototype = {
           if (data[i] < min)
             min = data[i];
         }
-        //var maxHeight = Math.max.apply(Math,data) * scale * heightScale;
-        var maxHeight = max * scale * heightScale;
+        return max; 
     },
     
-    generateGeometry: function() {
-        var quads = [];
+Terrain.prototype.generateGeometry = function(worldScale, worldWidth, worldDepth, worldHeightScale, heightData, heightDataInterpolated) {
+        this.quads = [];
         var quadIndex = 0;
-        var width = scale * worldWidth; 
-        var height = scale * worldDepth;
+        var width = worldScale * worldWidth; 
+        var height = worldScale * worldDepth;
         var widthSegments = worldWidth-1; 
         var heightSegments = worldDepth-1;
         var geometry = new THREE.BufferGeometry();
 
-        var width_half = scale*worldHalfWidth;
-        var height_half = scale*worldHalfDepth;
+        var width_half = worldScale*(worldWidth/2);
+        var height_half = worldScale*(worldDepth/2);
 
         var gridX = widthSegments || 1;
         var gridY = heightSegments || 1;
@@ -49,17 +49,14 @@ Terrain.prototype = {
         var offset2 = 0;
         var index = 0;
         for ( var iy = 0; iy < gridY1; iy ++ ) {
-
                 var y = iy * segment_height - height_half;
-
                 for ( var ix = 0; ix < gridX1; ix ++ ) {
-
                         var x = ix * segment_width - width_half;
 
                         index = offset / 3;
                         vertices[ offset     ] = x;
                         vertices[ offset + 1 ] = - y;
-                        vertices[ offset + 2 ] = data[index] * scale * heightScale;
+                        vertices[ offset + 2 ] = heightData[index] * worldScale * worldHeightScale;
 
                         normals[ offset + 2 ] = 1;
 
@@ -68,9 +65,7 @@ Terrain.prototype = {
 
                         offset += 3;
                         offset2 += 2;
-
                 }
-
         }
 
         offset = 0;
@@ -82,20 +77,20 @@ Terrain.prototype = {
                 offset2 += iy2 * gridX1*2;
 
                 for ( var ix = 0, ix2 = 1; ix < gridX; ix ++, ix2 += 2 ) {
-                        var s = data2[offset2+ix2];
+                        var s = heightDataInterpolated[offset2+ix2];
 
                         var a = (ix + gridX1 * iy);
                         var b = (ix + gridX1 * ( iy + 1 ));
                         var c = (( ix + 1 ) + gridX1 * ( iy + 1 ));
                         var d = (( ix + 1 ) + gridX1 * iy);
-                        var ph1 = (data[a]+data[c]) / 2;
-                        var ph2 = (data[b]+data[d]) / 2;
+                        var ph1 = (heightData[a]+heightData[c]) / 2;
+                        var ph2 = (heightData[b]+heightData[d]) / 2;
 
                         var diff1 = Math.abs(ph1 - s);
                         var diff2 = Math.abs(ph2 - s);
 
                         if (diff1 > diff2){
-                            quads[quadIndex] = 1;
+                            this.quads[quadIndex] = 1;
                             indices[ offset     ] = a; // left bot
                             indices[ offset + 1 ] = b; // left top
                             indices[ offset + 2 ] = d; // right bot
@@ -105,7 +100,7 @@ Terrain.prototype = {
                             indices[ offset + 5 ] = d; //right bot 
                         }
                         else{
-                            quads[quadIndex] = 0;
+                            this.quads[quadIndex] = 0;
                             indices[ offset     ] = a;
                             indices[ offset + 1 ] = c;
                             indices[ offset + 2 ] = d;
@@ -132,7 +127,8 @@ Terrain.prototype = {
         geometry.computeTangents();
         geometry.computeBoundingSphere();
         geometry.computeBoundingBox();
-    }
+        
+        return geometry;
 };
 
 

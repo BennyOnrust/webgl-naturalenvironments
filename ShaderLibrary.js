@@ -565,16 +565,13 @@ ShaderLibrary = {
 
                 "plantType" : { type: "f", value: 0 },
                 "colorInstance" : {type: "c", value: new THREE.Color(1.0,1.0,1.0)},
-//                "colorLOD" : {type: "v3", value: null},
                 "size": { type: "f", value: 1.0},
-//                "scale": {type: "f", value: 1.0},
                 "textureNumber": {type: "g", value: 1.0},
         },
 
         vertexShader: [
 
                 "attribute float size;",
-//                "attribute float scale;",
                 "uniform float threshNear;",
                 "uniform float threshFar;",
                 "uniform float threshLODNear;",
@@ -582,7 +579,6 @@ ShaderLibrary = {
 
                 "attribute float plantType;",
                 "attribute vec3 colorInstance;",
-//                "attribute vec3 colorLOD;",
                 "attribute float textureNumber;",
                 "varying vec2 vUvBillboard;",
                 "varying vec4 vColorInstance;",
