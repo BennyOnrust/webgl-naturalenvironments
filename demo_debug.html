@@ -44,6 +44,7 @@
                 <script src="Skybox.js"></script>
                 <script src="Dike.js"></script>
                 <script src="Water.js"></script>
+                <script src="PlantDistribution.js"></script>
 		<script src="js/controls/FirstPersonControls.js"></script>
                 <script src="js/controls/FlyControls.js"></script>
                 <script src="js/controls/TrackballControls.js"></script>
@@ -516,7 +517,6 @@
                                         var distC = distance(xpos,zpos,xc,zc);
                                         var distD = distance(xpos,zpos,xc,zf);
                                         var avgDist1, avgDist2;
-                                        var xp, zp;
                                         var xdist, zdist, tdist;
                                         if(quads[quadIndex] === 1){
                                             avgDist1 = distA + distB + distD;
