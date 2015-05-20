@@ -41,33 +41,15 @@ PlantDistribution = function(worldScale, worldWidth, worldDepth, plantTypes, lev
         this.plantRotations[i+1] = rRotate;
         this.plantRotations[i+2] = 0;
     }
+    this.createLocationQuads(worldWidth, worldDepth, levelsLOD, locations);
     
-    var nBlocksWidth = Math.pow(2,levelsLOD-1);
-    var nBlocksDepth = Math.pow(2,levelsLOD-1);
-
-    var blockWidth = worldWidth / nBlocksWidth;
-    var blockDepth = worldDepth / nBlocksDepth;
-
-    this.totalBlocks = nBlocksWidth * nBlocksDepth;
-
-    var locationsPerBlock = [];
-    for (var i = 0; i < this.totalBlocks; i++){
-        locationsPerBlock[i] = [];
-    }
-
-    for (var i = 0; i < locations.length-1; i+=3){
-        var blockIndex = Math.floor(locations[i+0] / blockWidth) + Math.floor(locations[i+1] / blockDepth) * nBlocksWidth;
-        locationsPerBlock[blockIndex].push(i);
-    }
-    
-    for (var i = 0; i < this.totalBlocks; i++){
-        var locBlock = locationsPerBlock[i];
+    for (var i = 0; i < this.locationsPerBlock.length; i++){
+        var locBlock = this.locationsPerBlock[i];
         var pos = new Float32Array( locBlock.length * 3 );
         var colors = new Float32Array(locBlock.length * 3);
         var scales = new Float32Array(locBlock.length * 3);
         var rotations = new Float32Array(locBlock.length * 3);
         var color = new THREE.Color();
-        var cRandom = new THREE.Color();
         var types = new Float32Array( locBlock.length );
         var billboardPos = new Float32Array( locBlock.length * 3);
         var billboardSize = new Float32Array( locBlock.length );
@@ -76,8 +58,6 @@ PlantDistribution = function(worldScale, worldWidth, worldDepth, plantTypes, lev
 
         for (var j = 0; j < locBlock.length; j++) {
             var ind = locBlock[j];
-            var xpos = locations[ind];
-            var zpos = locations[ind+1];
           
             var t = locations[ind+2];
 
@@ -254,36 +234,36 @@ PlantDistribution.prototype.calculateHeight = function(worldWidth, terrain, xpos
 },
     
 PlantDistribution.prototype.calculateColorVariation = function(plantType, rScale) {
-        var rColorLight = .8 + rScale * .125; 
-        var rColorSpartina = .8 + (Math.random() * .1);
-        var rColorArtemisia = .95 + (Math.random() * .05);
-        var rColorElymus = .9 + (Math.random() * .1);
-        var rColorLimonium = .9 + (Math.random() * 0.3);
-        var rColorAtriplex =.9 + Math.random() * .02;
-        var cRandom = new THREE.Color();
-        if ( plantType === 1){
-            cRandom.setRGB(rColorElymus*rColorLight,1.0*rColorLight,rColorElymus*rColorLight);
-        }
-        else if ( plantType === 2){
-            cRandom.setRGB(rColorSpartina*rColorLight,1.0*rColorLight,rColorSpartina*rColorLight);
-        }
-        else if ( plantType === 3){
-            cRandom.setRGB(rColorAtriplex*rColorLight,1.0*rColorLight,rColorAtriplex*rColorLight);
-        }
-        else if ( plantType === 4){
-            cRandom.setRGB(1.0,1.0,1.0);
-        }
-        else if ( plantType === 5){
-            cRandom.setRGB(rColorLimonium*rColorLight,rColorLimonium*rColorLight,1.0*rColorLight);
-        }
-        else if ( plantType === 6){
-            cRandom.setRGB(rColorArtemisia*rColorLight,1.0*rColorLight,rColorArtemisia*rColorLight);
-        }
-        else if ( plantType === 7){
-            cRandom.setRGB(1.0,1.0,1.0);
-        }
-        
-        return cRandom;
+    var rColorLight = .8 + rScale * .125; 
+    var rColorSpartina = .8 + (Math.random() * .1);
+    var rColorArtemisia = .95 + (Math.random() * .05);
+    var rColorElymus = .9 + (Math.random() * .1);
+    var rColorLimonium = .9 + (Math.random() * 0.3);
+    var rColorAtriplex =.9 + Math.random() * .02;
+    var cRandom = new THREE.Color();
+    if ( plantType === 1){
+        cRandom.setRGB(rColorElymus*rColorLight,1.0*rColorLight,rColorElymus*rColorLight);
+    }
+    else if ( plantType === 2){
+        cRandom.setRGB(rColorSpartina*rColorLight,1.0*rColorLight,rColorSpartina*rColorLight);
+    }
+    else if ( plantType === 3){
+        cRandom.setRGB(rColorAtriplex*rColorLight,1.0*rColorLight,rColorAtriplex*rColorLight);
+    }
+    else if ( plantType === 4){
+        cRandom.setRGB(1.0,1.0,1.0);
+    }
+    else if ( plantType === 5){
+        cRandom.setRGB(rColorLimonium*rColorLight,rColorLimonium*rColorLight,1.0*rColorLight);
+    }
+    else if ( plantType === 6){
+        cRandom.setRGB(rColorArtemisia*rColorLight,1.0*rColorLight,rColorArtemisia*rColorLight);
+    }
+    else if ( plantType === 7){
+        cRandom.setRGB(1.0,1.0,1.0);
+    }
+
+    return cRandom;
 };
 
 PlantDistribution.prototype.updateTerrainInformation = function(worldWidth, worldDepth, worldScale, offsetDist, plantTypes, locations, terrain) {
@@ -394,4 +374,24 @@ PlantDistribution.prototype.updateTerrainInformation = function(worldWidth, worl
     terrain.terrainGeometry.addAttribute( 'tColor', new THREE.BufferAttribute( terrainColors, 3 ));
     terrain.terrainGeometry.addAttribute( 'tType', new THREE.BufferAttribute( terrainTypes, 1 ));
     
+};
+
+PlantDistribution.prototype.createLocationQuads = function(worldWidth, worldDepth, levelsLOD, locations) {
+    var nBlocksWidth = Math.pow(2,levelsLOD-1);
+    var nBlocksDepth = Math.pow(2,levelsLOD-1);
+
+    var blockWidth = worldWidth / nBlocksWidth;
+    var blockDepth = worldDepth / nBlocksDepth;
+
+    this.totalBlocks = nBlocksWidth * nBlocksDepth;
+
+    this.locationsPerBlock = [];
+    for (var i = 0; i < this.totalBlocks; i++){
+        this.locationsPerBlock[i] = [];
+    }
+
+    for (var i = 0; i < locations.length-1; i+=3){
+        var blockIndex = Math.floor(locations[i+0] / blockWidth) + Math.floor(locations[i+1] / blockDepth) * nBlocksWidth;
+        this.locationsPerBlock[blockIndex].push(i);
+    }
 };
