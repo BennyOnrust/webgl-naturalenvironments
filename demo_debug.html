@@ -44,38 +44,21 @@
                 <script src="Skybox.js"></script>
                 <script src="Dike.js"></script>
                 <script src="Water.js"></script>
+                <script src="PlantModels.js"></script>
+                <script src="BillboardDistribution.js"></script>
                 <script src="PlantDistribution.js"></script>
-		<script src="js/controls/FirstPersonControls.js"></script>
                 <script src="js/controls/FlyControls.js"></script>
-                <script src="js/controls/TrackballControls.js"></script>
-                <script src="js/controls/OrbitControls.js"></script>
                 <script src="js/loaders/OBJMTLLoader.js"></script>
                 <script src="js/loaders/OBJLoader.js"></script>
                 <script src="js/loaders/MTLLoader.js"></script>
-                <script src="js/Mirror.js"></script>
-		<script src="js/WaterShader_new.js"></script>
-                <script src="js/shaders/FresnelShader_new.js"></script>
                 <script src="js/loaders/TGALoader.js"></script>
-
                 
-                <script src="js/shaders/CopyShader.js"></script>
-		<script src="js/shaders/BokehShader.js"></script>
-                <script src="js/shaders/BlendShader.js"></script>
-                <script src="js/shaders/SSAOShader.js"></script>
-                <script src="js/shaders/FXAAShader.js"></script>
-                <script src="js/shaders/ParallaxShader.js"></script>
-                <script src="js/shaders/ColorCorrectionShader.js"></script>
-                <script src="js/SkyShader.js"></script>
-
 		<script src="js/postprocessing/EffectComposer.js"></script>
 		<script src="js/postprocessing/RenderPass.js"></script>
-                <script src="js/postprocessing/BloomPass.js"></script> 
 		<script src="js/postprocessing/ShaderPass.js"></script>
 		<script src="js/postprocessing/MaskPass.js"></script>
-                <script src="js/postprocessing/DotScreenPass.js"></script> 
-		<script src="js/postprocessing/BokehPass.js"></script>
-                <script src="js/shaders/DotScreenShader.js"></script>
                 <script src="js/shaders/BlendAdvancedShader.js"></script>
+                <script src="js/shaders/CopyShader.js"></script>
 
 		<script src="js/Detector.js"></script>
 		<script>
@@ -98,7 +81,6 @@
                         var pNumber = 0;
                                                 
                         var billboards, objects, terrains, terrainObjects, plantModels;
-                        var plantModelMaterials = [];
 
                         var scale = 2;
                         var images;
@@ -309,10 +291,7 @@
                                 renderTargetObjects = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, parameters );
                                 renderTargetBillboards = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, parameters );
                                 renderTargetBlend = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false } );
-                                                                
-                                var depthMaterial = new THREE.ShaderMaterial(ShaderLibrary['depthRGBA_instancing']);
-                                depthMaterial._shadowPass = true;
-                                
+                                                               
                                 THREE.ImageUtils.crossOrigin = '';
                                 var mudTexture = THREE.ImageUtils.loadTexture(mudImageLink);
                                 mudTexture.wrapT = THREE.RepeatWrapping;
@@ -353,6 +332,23 @@
                                 var skyboxTexture = THREE.ImageUtils.loadTextureCube( urls );
 				skyboxTexture.format = THREE.RGBFormat;
                                 skyboxTexture.mapping = THREE.CubeReflectionMapping;
+                                
+                                billboardTextures = THREE.ImageUtils.loadTexture( billboardsLink );
+                                
+                                var plantModelMaterials = [];
+
+                                plantModelMaterials[0] = THREE.ImageUtils.loadTexture( texturesElymusLink );
+                                plantModelMaterials[1] = THREE.ImageUtils.loadTexture( texturesSpartinaLink );
+                                plantModelMaterials[2] = THREE.ImageUtils.loadTexture( texturesAtriplexLink );
+                                plantModelMaterials[3] = THREE.ImageUtils.loadTexture( texturesAsterLink );
+                                plantModelMaterials[4] = THREE.ImageUtils.loadTexture( texturesLimoniumLink );
+                                plantModelMaterials[5] = THREE.ImageUtils.loadTexture( texturesArtemisiaLink );
+                                plantModelMaterials[6] = THREE.ImageUtils.loadTexture( texturesSalicorniaLink );
+                                
+                                for(var t = 0; t < plantTypes.length; t++){
+                                    plantModelMaterials[t].magFilter = THREE.LinearFilter;
+                                    plantModelMaterials[t].minFilter = THREE.LinearFilter;
+                                }
                                 
                                 // LIGHTS
                                 lightsObject = new Lights(scale, camera.fov, "object");
@@ -424,311 +420,62 @@
                                 offsetFrustum =  -1 * (offsetX + offsetZ);
                                 
                                 console.log("merging");
-                                var objectPositionMerged = [];
-                                var objectColorsMerged = [];
-                                var objectScaleMerged = [];
-                                var objectRotationMerged = [];
-                                var objectPlantTypeMerged = [];
-                                var billboardPositionsMerged = [];
-                                var billboardSizesMerged = [];
-                                var objectColorRandomMerged = [];
-                                var billboardTextureNumberMerged = [];
-                                objectPositionMerged[levelsLOD-1] = plantDistribution.objectPositions; 
-                                objectColorsMerged[levelsLOD-1] = plantDistribution.objectColors;
-                                objectScaleMerged[levelsLOD-1] = plantDistribution.objectScales;
-                                objectRotationMerged[levelsLOD-1] = plantDistribution.objectRotations;
-                                objectPlantTypeMerged[levelsLOD-1] = plantDistribution.objectPlantType;
-                                billboardPositionsMerged[levelsLOD-1] = plantDistribution.billboardPositions;
-                                billboardSizesMerged[levelsLOD-1] = plantDistribution.billboardSizes;
-                                objectColorRandomMerged[levelsLOD-1] = plantDistribution.objectColorRandom;
-                                billboardTextureNumberMerged[levelsLOD-1] = plantDistribution.billboardTextureNumber;
                                 
-                                for(var i = levelsLOD-1; i > 0; i--){
-                                    objectPositionMerged[i-1] = [];
-                                    objectColorsMerged[i-1] = [];
-                                    objectScaleMerged[i-1] = [];
-                                    objectRotationMerged[i-1] = [];
-                                    objectPlantTypeMerged[i-1] = [];
-                                    billboardPositionsMerged[i-1] = [];
-                                    billboardSizesMerged[i-1] = [];
-                                    objectColorRandomMerged[i-1] = [];
-                                    billboardTextureNumberMerged[i-1] = [];
-                                    var nWidth = Math.pow(2,(i));
-                                    var nDepth = Math.pow(2,(i));
-                                    var index = 0;
-                                    var length0,length1,length2,length3;
-                                    for(var ny = 0; ny < nDepth; ny+=2){
-                                        for(var nx = 0; nx < nWidth; nx+=2){
-                                            length0 = objectPositionMerged[i][nx + ny * nWidth].length;
-                                            length1 = objectPositionMerged[i][(nx + 1) + ny * nWidth].length;
-                                            length2 = objectPositionMerged[i][nx + (ny + 1) * nWidth].length;
-                                            length3 = objectPositionMerged[i][(nx + 1) + (ny + 1) * nWidth].length;
-                                            
-                                            objectPositionMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
-                                            objectPositionMerged[i-1][index].set(objectPositionMerged[i][nx + ny * nWidth],0); 
-                                            objectPositionMerged[i-1][index].set(objectPositionMerged[i][(nx + 1) + ny * nWidth],length0); 
-                                            objectPositionMerged[i-1][index].set(objectPositionMerged[i][nx + (ny + 1) * nWidth],length0 + length1);
-                                            objectPositionMerged[i-1][index].set(objectPositionMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
-
-                                            objectColorsMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
-                                            objectColorsMerged[i-1][index].set(objectColorsMerged[i][nx + ny * nWidth],0);
-                                            objectColorsMerged[i-1][index].set(objectColorsMerged[i][(nx + 1) + ny * nWidth],length0);
-                                            objectColorsMerged[i-1][index].set(objectColorsMerged[i][nx + (ny+1) * nWidth],length0 + length1);
-                                            objectColorsMerged[i-1][index].set(objectColorsMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
-                                            
-                                            objectScaleMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
-                                            objectScaleMerged[i-1][index].set(objectScaleMerged[i][nx + ny * nWidth],0);
-                                            objectScaleMerged[i-1][index].set(objectScaleMerged[i][(nx + 1) + ny * nWidth],length0);
-                                            objectScaleMerged[i-1][index].set(objectScaleMerged[i][nx + (ny+1) * nWidth],length0 + length1);
-                                            objectScaleMerged[i-1][index].set(objectScaleMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
-                                            
-                                            objectRotationMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
-                                            objectRotationMerged[i-1][index].set(objectRotationMerged[i][nx + ny * nWidth],0);
-                                            objectRotationMerged[i-1][index].set(objectRotationMerged[i][(nx + 1) + ny * nWidth],length0);
-                                            objectRotationMerged[i-1][index].set(objectRotationMerged[i][nx + (ny+1) * nWidth],length0 + length1);
-                                            objectRotationMerged[i-1][index].set(objectRotationMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
-                                            
-                                            objectPlantTypeMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
-                                            objectPlantTypeMerged[i-1][index].set(objectPlantTypeMerged[i][nx + ny * nWidth],0);
-                                            objectPlantTypeMerged[i-1][index].set(objectPlantTypeMerged[i][(nx + 1) + ny * nWidth],length0/3);
-                                            objectPlantTypeMerged[i-1][index].set(objectPlantTypeMerged[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
-                                            objectPlantTypeMerged[i-1][index].set(objectPlantTypeMerged[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
-                                            
-                                            billboardPositionsMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3));
-                                            billboardPositionsMerged[i-1][index].set(billboardPositionsMerged[i][nx + ny * nWidth],0);
-                                            billboardPositionsMerged[i-1][index].set(billboardPositionsMerged[i][(nx + 1) + ny * nWidth],length0);
-                                            billboardPositionsMerged[i-1][index].set(billboardPositionsMerged[i][nx + (ny+1) * nWidth],(length0 + length1));
-                                            billboardPositionsMerged[i-1][index].set(billboardPositionsMerged[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2));
-                                            
-                                            billboardSizesMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
-                                            billboardSizesMerged[i-1][index].set(billboardSizesMerged[i][nx + ny * nWidth],0);
-                                            billboardSizesMerged[i-1][index].set(billboardSizesMerged[i][(nx + 1) + ny * nWidth],length0/3);
-                                            billboardSizesMerged[i-1][index].set(billboardSizesMerged[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
-                                            billboardSizesMerged[i-1][index].set(billboardSizesMerged[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
-                                            
-                                            objectColorRandomMerged[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
-                                            objectColorRandomMerged[i-1][index].set(objectColorRandomMerged[i][nx + ny * nWidth],0);
-                                            objectColorRandomMerged[i-1][index].set(objectColorRandomMerged[i][(nx + 1) + ny * nWidth],length0);
-                                            objectColorRandomMerged[i-1][index].set(objectColorRandomMerged[i][nx + (ny+1) * nWidth],length0 + length1);
-                                            objectColorRandomMerged[i-1][index].set(objectColorRandomMerged[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
-                                            
-                                            billboardTextureNumberMerged[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
-                                            billboardTextureNumberMerged[i-1][index].set(billboardTextureNumberMerged[i][nx + ny * nWidth],0);
-                                            billboardTextureNumberMerged[i-1][index].set(billboardTextureNumberMerged[i][(nx + 1) + ny * nWidth],length0/3);
-                                            billboardTextureNumberMerged[i-1][index].set(billboardTextureNumberMerged[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
-                                            billboardTextureNumberMerged[i-1][index].set(billboardTextureNumberMerged[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
-                                            index++;
-                                        }
-                                    }
-                                }
-                                
-                                var plantPositions = [];
-                                var plantRotations = [];
-                                var plantScales = [];
-                                var plantColors = [];
-                                for(var i = 0; i < plantTypes.length; i++){
-                                    plantPositions[i] = [];
-                                    plantRotations[i] = [];
-                                    plantScales[i] = [];
-                                    plantColors[i] = [];
-                                }
-                                
-                                var pt;
-                                for (var i = 0; i < plantDistribution.totalBlocks; i++){
-                                    
-                                    for(var t = 0; t < plantTypes.length; t++){
-                                        plantPositions[t][i] = [];
-                                        plantRotations[t][i] = [];
-                                        plantScales[t][i] = [];
-                                        plantColors[t][i] = [];
-                                    }
-                                    
-                                    for (var j = 0; j < plantDistribution.objectPlantType[i].length; j++){
-                                        pt = plantDistribution.objectPlantType[i][j];
-                                        for(var t = 0; t < plantTypes.length; t++){
-                                            if(t === pt){
-                                                plantPositions[t][i].push(plantDistribution.objectPositions[i][j*3 + 0]);
-                                                plantPositions[t][i].push(plantDistribution.objectPositions[i][j*3 + 1]);
-                                                plantPositions[t][i].push(plantDistribution.objectPositions[i][j*3 + 2]);
-                                                plantRotations[t][i].push(plantDistribution.objectRotations[i][j*3 + 0]);
-                                                plantRotations[t][i].push(plantDistribution.objectRotations[i][j*3 + 1]);
-                                                plantRotations[t][i].push(plantDistribution.objectRotations[i][j*3 + 2]);
-                                                plantScales[t][i].push(plantDistribution.objectScales[i][j*3 + 0]);
-                                                plantScales[t][i].push(plantDistribution.objectScales[i][j*3 + 1]);
-                                                plantScales[t][i].push(plantDistribution.objectScales[i][j*3 + 2]);
-                                                plantColors[t][i].push(plantDistribution.objectColorRandom[i][j*3 + 0]);
-                                                plantColors[t][i].push(plantDistribution.objectColorRandom[i][j*3 + 1]);
-                                                plantColors[t][i].push(plantDistribution.objectColorRandom[i][j*3 + 2]);
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                var plantInstancePositions = [];
-                                var plantInstanceRotations = [];
-                                var plantInstanceScales = [];
-                                var plantInstanceColors = [];
-                                
-                                for(var t = 0; t < plantTypes.length; t++){
-                                    plantInstancePositions[t] = [];
-                                    plantInstanceRotations[t] = [];
-                                    plantInstanceScales[t] = [];
-                                    plantInstanceColors[t] = []
-                                    for(var i = 0; i < plantDistribution.totalBlocks; i++){
-                                        plantInstancePositions[t][i] = new Float32Array(plantPositions[t][i]);
-                                        plantInstanceRotations[t][i] = new Float32Array(plantRotations[t][i]);
-                                        plantInstanceScales[t][i] = new Float32Array(plantScales[t][i]);
-                                        plantInstanceColors[t][i] = new Float32Array(plantColors[t][i]);
-                                    }
-                                }
-                                
+                                plantModelObjects = new PlantModels(plantDistribution, plantTypes, levelsLOD)
+                                plantModelObjects.generateMaterials(plantModelMaterials, thresholdNear, offsetLOD, transitionZone, plantTypes, nTextures);
+                                plantModelObjects.generateMeshes(plantTypes, levelsLOD, plantModels, plantDistribution);
+                                sceneObject.add(plantModelObjects);
                                 console.log("done merging");
 
                                 console.log("Billboard creation");
                                 
                                 customMaterialBillboards = new THREE.ShaderMaterial(ShaderLibrary['billboard']);
-                                billboardTextures = THREE.ImageUtils.loadTexture( billboardsLink );
-                                
-                                plantModelMaterials[0] = THREE.ImageUtils.loadTexture( texturesElymusLink );
-                                plantModelMaterials[1] = THREE.ImageUtils.loadTexture( texturesSpartinaLink );
-                                plantModelMaterials[2] = THREE.ImageUtils.loadTexture( texturesAtriplexLink );
-                                plantModelMaterials[3] = THREE.ImageUtils.loadTexture( texturesAsterLink );
-                                plantModelMaterials[4] = THREE.ImageUtils.loadTexture( texturesLimoniumLink );
-                                plantModelMaterials[5] = THREE.ImageUtils.loadTexture( texturesArtemisiaLink );
-                                plantModelMaterials[6] = THREE.ImageUtils.loadTexture( texturesSalicorniaLink );
-                                
-                                for(var t = 0; t < plantTypes.length; t++){
-                                    plantModelMaterials[t].magFilter = THREE.LinearFilter;
-                                    plantModelMaterials[t].minFilter = THREE.LinearFilter;
-                                }
                                 
                                 // Billboards
-                                billboards = [];
                                 
-                                billboardTextureMap.anisotropy = 1;
-                                billboardTextureMap.generateMipmaps = true;
+                                billboardDistribution = new BillboardDistribution(billboardTextureMap,thresholdNear,offsetLOD, transitionZone, thresholdBillboard, transitionZoneBillboards, overlayFactor, plantDistribution, levelsLOD);
+                                sceneBillboard.add(billboardDistribution);
                                 
-                                customMaterialBillboards.uniforms.billboardTextureAtlas.value = billboardTextureMap;
-                                customMaterialBillboards.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                customMaterialBillboards.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
-                                customMaterialBillboards.uniforms.threshLODNear.value = thresholdBillboard;
-                                customMaterialBillboards.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards;
-                                customMaterialBillboards.sizeAttenuation = true;
-                                customMaterialBillboards.uniforms.nTypes.value = 3;
-                                customMaterialBillboards.uniforms.overlayFactor.value = overlayFactor;
-                                for( var l = 0; l < levelsLOD; l++){
-                                    billboards[l] = [];
-                                    for(var i = 0; i < objectPositionMerged[l].length; i++){
-                                        var _particleGeom = new THREE.BufferGeometry();
-                                        _particleGeom.addAttribute( 'position', new THREE.BufferAttribute( billboardPositionsMerged[l][i], 3 ) );
-                                        _particleGeom.addAttribute( 'colorInstance', new THREE.BufferAttribute( objectColorRandomMerged[l][i], 3 ) );
-                                        _particleGeom.addAttribute( 'plantType', new THREE.BufferAttribute( objectPlantTypeMerged[l][i], 1 ) );
-                                        _particleGeom.addAttribute( 'size', new THREE.BufferAttribute( billboardSizesMerged[l][i], 1 ) );
-                                        _particleGeom.addAttribute( 'textureNumber', new THREE.BufferAttribute( billboardTextureNumberMerged[l][i], 1 ) );
-                                        billboards[l][i] = new THREE.PointCloud( _particleGeom, customMaterialBillboards );
-                                        billboards[l][i].frustumCulled = false;
-                                        billboards[l][i].autoupdate = false;
-                                        billboards[l][i].updateMatrix();
-                                        billboards[l][i].visible = false;
-                                        sceneBillboard.add(billboards[l][i]);
-                                    }
-                                }
                                 console.log("Billboard creation finished");
                                 
                                 console.log("Instance object creation");
-
-                                // Load plant MESH
-                                instancingMaterials = [];
-                                instancingDepthMaterials = [];
-                                instancingMaterialReference = new THREE.ShaderMaterial( ShaderLibrary['instancingColorMaterial'] );
-                                instancingMaterialReference.vertexColors = THREE.VertexColors;
-                                instancingMaterialReference.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                instancingMaterialReference.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
-                                instancingMaterialReference.side = THREE.DoubleSide;
-                                
-                                var instancingMaterialReference2 = new THREE.ShaderMaterial( ShaderLibrary['instancingTextureMaterial'] );
-                                instancingMaterialReference2.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                instancingMaterialReference2.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
-                                instancingMaterialReference2.side = THREE.DoubleSide;
-                                for(var t =0; t < plantTypes.length; t++){
-                                    instancingMaterials[t] = instancingMaterialReference2.clone();
-                                    instancingMaterials[t].uniforms.textureMap.value = plantModelMaterials[t];
-                                    instancingMaterials[t].uniforms.nTexture.value = nTextures[t];
-                                    
-                                    instancingDepthMaterials[t] = depthMaterial.clone();
-                                    instancingDepthMaterials[t].uniforms.textureMap.value = plantModelMaterials[t];
-                                    instancingDepthMaterials[t].uniforms.nTexture.value = nTextures[t];
-                                }
-                                
-                                plantModelBlocks = [];
-                                for(var t = 0; t < plantTypes.length; t++){
-                                    plantModelBlocks[t] = [];
-                                    for(var j = 0; j < objectPositionMerged[levelsLOD-1].length; j++){
-                                        var plantModelInstancedGeom = new THREE.BufferGeometry();
-                                        plantModelInstancedGeom.addAttribute( 'position', plantModels[t].geometry.attributes.position);
-                                        plantModelInstancedGeom.addAttribute( 'normal', plantModels[t].geometry.attributes.normal);
-                                        plantModelInstancedGeom.addAttribute( 'uv', plantModels[t].geometry.attributes.uv);
-                                        plantModelInstancedGeom.addAttribute( 'textureIndex', plantModels[t].geometry.attributes.textureIndex );
-                                        plantModelInstancedGeom.addAttribute( 'positionInstances', new THREE.BufferAttribute( plantInstancePositions[t][j], 3 ) );
-                                        plantModelInstancedGeom.addAttribute( 'colorInstances', new THREE.BufferAttribute( plantInstanceColors[t][j], 3 ) );
-                                        plantModelInstancedGeom.addAttribute( 'colorInstance', new THREE.BufferAttribute( plantInstanceColors[t][j], 3 ) );
-                                        plantModelInstancedGeom.addAttribute( 'scaleInstances', new THREE.BufferAttribute( plantInstanceScales[t][j], 3 ) );
-                                        plantModelInstancedGeom.addAttribute( 'rotateInstances', new THREE.BufferAttribute( plantInstanceRotations[t][j], 3 ) );
-                                        plantModelInstancedGeom.attributes.positionInstances.instancing = true;
-                                        plantModelInstancedGeom.attributes.colorInstances.instancing = true;
-                                        plantModelInstancedGeom.attributes.colorInstance.instancing = true;
-                                        plantModelInstancedGeom.attributes.scaleInstances.instancing = true;
-                                        plantModelInstancedGeom.attributes.rotateInstances.instancing = true;
-                                        
-                                        plantModelBlocks[t][j] = new THREE.Mesh( plantModelInstancedGeom, instancingMaterials[t] );
-                                        plantModelBlocks[t][j].rotation.x = -Math.PI / 2;
-                                        plantModelBlocks[t][j].scale.x *= 1.0;
-                                        plantModelBlocks[t][j].scale.y *= 1.0;
-                                        plantModelBlocks[t][j].scale.z *= 1.0;
-                                        plantModelBlocks[t][j].instancing = true;
-                                        plantModelBlocks[t][j].visible = false;
-                                        plantModelBlocks[t][j].frustumCulled = false;
-                                        plantModelBlocks[t][j].autoupdate = false;
-                                        plantModelBlocks[t][j].updateMatrix();
-                                        plantModelBlocks[t][j].castShadow = true;
-                                        plantModelBlocks[t][j].receiveShadow = true;
-                                        plantModelBlocks[t][j].customDepthMaterial = instancingDepthMaterials[t];
-                                        sceneObject.add(plantModelBlocks[t][j]);
-                                    }
-                                }
-                                
-                                var geo = new THREE.BoxGeometry(.33,.33,.33,1,1,1);
-                                geo.computeVertexNormals();
-                                var cubeGeo = new THREE.BufferGeometry().fromGeometry(geo);
-                                objects = [];
-                                for(var i = 0; i < objectPositionMerged[levelsLOD-1].length; i++){
-                                    var objectInstancedGeom = new THREE.BufferGeometry();
-                                    objectInstancedGeom.addAttribute('position',cubeGeo.attributes.position);
-                                    objectInstancedGeom.addAttribute('normal',cubeGeo.attributes.normal);
-                                    objectInstancedGeom.addAttribute('uv',cubeGeo.attributes.uv);
-                                    objectInstancedGeom.addAttribute( 'positionInstances', new THREE.BufferAttribute( objectPositionMerged[levelsLOD-1][i], 3 ) );
-                                    objectInstancedGeom.addAttribute( 'colorInstances', new THREE.BufferAttribute( objectColorsMerged[levelsLOD-1][i], 3 ) );
-                                    objectInstancedGeom.addAttribute( 'scaleInstances', new THREE.BufferAttribute( objectScaleMerged[levelsLOD-1][i], 3 ) );
-                                    objectInstancedGeom.addAttribute( 'rotateInstances', new THREE.BufferAttribute( objectRotationMerged[levelsLOD-1][i], 3 ) );
-                                    objectInstancedGeom.attributes.positionInstances.instancing = true;
-                                    objectInstancedGeom.attributes.colorInstances.instancing = true;
-                                    objectInstancedGeom.attributes.scaleInstances.instancing = true;
-                                    objectInstancedGeom.attributes.rotateInstances.instancing = true;
-            
-                                    objects[i] = new THREE.Mesh( objectInstancedGeom, instancingMaterialReference );
-                                    objects[i].scale.x *= 2.0;
-                                    objects[i].scale.y *= 2.0;
-                                    objects[i].scale.z *= 2.0;
-                                    objects[i].instancing = true;
-                                    objects[i].visible = false;
-                                    objects[i].frustumCulled = false;
-                                    objects[i].autoupdate = false;
-                                    objects[i].updateMatrix();
-                                    objects[i].castShadow = true;
-                                    objects[i].receiveShadow = true;
-                                    sceneObject.add(objects[i]);
-                                }
+//                                var geo = new THREE.BoxGeometry(.33,.33,.33,1,1,1);
+//                                geo.computeVertexNormals();
+//                                var cubeGeo = new THREE.BufferGeometry().fromGeometry(geo);
+//                                objects = [];
+//                                for(var i = 0; i < plantDistribution.objectPositionLODs[levelsLOD-1].length; i++){
+//                                    var objectInstancedGeom = new THREE.BufferGeometry();
+//                                    objectInstancedGeom.addAttribute('position',cubeGeo.attributes.position);
+//                                    objectInstancedGeom.addAttribute('normal',cubeGeo.attributes.normal);
+//                                    objectInstancedGeom.addAttribute('uv',cubeGeo.attributes.uv);
+//                                    objectInstancedGeom.addAttribute( 'positionInstances', new THREE.BufferAttribute( plantDistribution.objectPositionLODs[levelsLOD-1][i], 3 ) );
+//                                    objectInstancedGeom.addAttribute( 'colorInstances', new THREE.BufferAttribute( plantDistribution.objectColorLODs[levelsLOD-1][i], 3 ) );
+//                                    objectInstancedGeom.addAttribute( 'scaleInstances', new THREE.BufferAttribute( plantDistribution.objectScaleLODs[levelsLOD-1][i], 3 ) );
+//                                    objectInstancedGeom.addAttribute( 'rotateInstances', new THREE.BufferAttribute( plantDistribution.objectRotationLODs[levelsLOD-1][i], 3 ) );
+//                                    objectInstancedGeom.attributes.positionInstances.instancing = true;
+//                                    objectInstancedGeom.attributes.colorInstances.instancing = true;
+//                                    objectInstancedGeom.attributes.scaleInstances.instancing = true;
+//                                    objectInstancedGeom.attributes.rotateInstances.instancing = true;
+//                                    
+//                                    var instancingMaterialReference = new THREE.ShaderMaterial( ShaderLibrary['instancingColorMaterial'] );
+    //                                instancingMaterialReference.vertexColors = THREE.VertexColors;
+    //                                instancingMaterialReference.uniforms.threshNear.value = thresholdNear * offsetLOD;
+    //                                instancingMaterialReference.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+    //                                instancingMaterialReference.side = THREE.DoubleSide;
+//            
+//                                    objects[i] = new THREE.Mesh( objectInstancedGeom, instancingMaterialReference );
+//                                    objects[i].scale.x *= 2.0;
+//                                    objects[i].scale.y *= 2.0;
+//                                    objects[i].scale.z *= 2.0;
+//                                    objects[i].instancing = true;
+//                                    objects[i].visible = false;
+//                                    objects[i].frustumCulled = false;
+//                                    objects[i].autoupdate = false;
+//                                    objects[i].updateMatrix();
+//                                    objects[i].castShadow = true;
+//                                    objects[i].receiveShadow = true;
+//                                    sceneObject.add(objects[i]);
+//                                }
                                                                 
                                 console.log("Finished instance object generation");
                                 
@@ -819,7 +566,7 @@
                                         case 77: /*M*/  toggleShadow(); break; 
                                         case 85: /*U*/  controls.autoForward = !controls.autoForward; break;
                                         case 86: /*V*/  BLENDING_MODE = !BLENDING_MODE; break;
-                                        case 67: /*C*/  plantVisible = !plantVisible; if(plantVisible) plantVisibility(); objectsVisible = false; break;
+                                        case 67: /*C*/  plantModelObjects.visible = !plantModelObjects.visible; objectsVisible = false; break;
 
 				}
 
@@ -842,8 +589,8 @@
                         
                         function toggleShadow(){
                             for(var t = 0; t < plantTypes.length; t++){
-                                    for(var j = 0; j < plantModelBlocks[t].length; j++){
-                                        plantModelBlocks[t][j].castShadow = !plantModelBlocks[t][j].castShadow;
+                                    for(var j = 0; j < plantModelObjects.plantModelBlocks[t].length; j++){
+                                        plantModelObjects.plantModelBlocks[t][j].castShadow = !plantModelObjects.plantModelBlocks[t][j].castShadow;
                                     }
                             }
                         }
@@ -856,8 +603,8 @@
                             instancingMaterialReference.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                             
                             for(var t = 0; t <  plantTypes.length; t++){
-                                instancingMaterials[t].uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                instancingMaterials[t].uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                plantModelObjects.instancingMaterials[t].uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                plantModelObjects.instancingMaterials[t].uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                             }
                             
                             terrain.materialNear.uniforms.threshNear.value = thresholdNear * offsetLOD;
@@ -881,8 +628,8 @@
                                 instancingMaterialReference.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                                 
                                 for(var t = 0; t <  plantTypes.length; t++){
-                                    instancingMaterials[t].uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                    instancingMaterials[t].uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                    plantModelObjects.instancingMaterials[t].uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                    plantModelObjects.instancingMaterials[t].uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                                 }
                                 
                                 terrain.materialNear.uniforms.threshNear.value = thresholdNear * offsetLOD;
@@ -1178,7 +925,7 @@
                                                 if (frustT === 0 && !objectRange && !billboardRange){
                                                     terrains[l][i].visible = true;
                                                     linesLOD[l][i].visible = linesLODVisible && true;
-                                                    billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && false;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && false;
                                                     childrenNew[i*4 + 0] = false;
                                                     childrenNew[i*4 + 1] = false;
                                                     childrenNew[i*4 + 2] = false;
@@ -1187,7 +934,7 @@
                                                 else if (frustT === 0 && !objectRange && billboardRange){
                                                     terrains[l][i].visible = true;
                                                     linesLOD[l][i].visible = linesLODVisible && true;
-                                                    billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
                                                     childrenNew[i*4 + 0] = false;
                                                     childrenNew[i*4 + 1] = false;
                                                     childrenNew[i*4 + 2] = false;
@@ -1196,7 +943,7 @@
                                                 else if(frustT === 6){
                                                     terrains[l][i].visible = false;
                                                     linesLOD[l][i].visible = false;
-                                                    billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = false;
                                                     childrenNew[i*4 + 0] = false;
                                                     childrenNew[i*4 + 1] = false;
                                                     childrenNew[i*4 + 2] = false;
@@ -1205,7 +952,7 @@
                                                 else if(frustT > 0 || !distT){
                                                     terrains[l][i].visible = false;
                                                     linesLOD[l][i].visible = false;
-                                                    billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = false;
                                                     childrenNew[i*4 + 0] = true;
                                                     childrenNew[i*4 + 1] = true;
                                                     childrenNew[i*4 + 2] = true;
@@ -1215,7 +962,7 @@
                                             else{
                                                 terrains[l][i].visible = false;
                                                 linesLOD[l][i].visible = false;
-                                                billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = false;
                                                 childrenNew[i*4 + 0] = false;
                                                 childrenNew[i*4 + 1] = false;
                                                 childrenNew[i*4 + 2] = false;
@@ -1235,42 +982,42 @@
                                                     terrains[l][i].visible = true;
                                                     terrainObjects[levelsLOD-1][i].visible = true;
                                                     linesLOD[l][i].visible = linesLODVisible && true;
-                                                    objects[terrainToObjectIDs[l][i]].visible = objectsVisible && true;
+//                                                    objects[terrainToObjectIDs[l][i]].visible = objectsVisible && true;
                                                     for(var t = 0; t < plantTypes.length; t++){
-                                                        plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = plantVisible && true;
+                                                        plantModelObjects.plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = true;
                                                     }
-                                                    billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
                                                 }
                                                 else if(frustT){
                                                     terrains[l][i].visible = true;
                                                     linesLOD[l][i].visible = linesLODVisible && true;
                                                     terrainObjects[levelsLOD-1][i].visible = false;
-                                                    objects[terrainToObjectIDs[l][i]].visible = false;
+//                                                    objects[terrainToObjectIDs[l][i]].visible = false;
                                                     for(var t = 0; t < plantTypes.length; t++){
-                                                        plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
+                                                        plantModelObjects.plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
                                                     }
-                                                    billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
                                                 }
                                                 else{
                                                     terrains[l][i].visible = false;
                                                     linesLOD[l][i].visible = false;
                                                     terrainObjects[levelsLOD-1][i].visible = false;
-                                                    objects[terrainToObjectIDs[l][i]].visible = false;
+//                                                    objects[terrainToObjectIDs[l][i]].visible = false;
                                                     for(var t = 0; t < plantTypes.length; t++){
-                                                        plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
+                                                        plantModelObjects.plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
                                                     }
-                                                    billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = false;
                                                 }
                                             }
                                             else{
                                                 terrains[l][i].visible = false;
                                                 linesLOD[l][i].visible = false;
                                                 terrainObjects[levelsLOD-1][i].visible = false;
-                                                objects[terrainToObjectIDs[l][i]].visible = false;
+//                                                objects[terrainToObjectIDs[l][i]].visible = false;
                                                 for(var t = 0; t < plantTypes.length; t++){
-                                                    plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
+                                                    plantModelObjects.plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
                                                 }
-                                                billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = false;
                                             }
                                         }
                                     }

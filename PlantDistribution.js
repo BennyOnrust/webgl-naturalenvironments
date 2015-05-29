@@ -1,13 +1,25 @@
 PlantDistribution = function(worldScale, worldWidth, worldDepth, plantTypes, levelsLOD, locations, terrain, plantModelSizes, plantBillboardSizes, billboardSizeMultiplier, offsetDist) {    
-    this.objectPositions = [];
-    this.objectColors = [];
-    this.objectScales = [];
-    this.objectRotations = [];
-    this.objectPlantType = [];
-    this.billboardPositions = [];
-    this.billboardSizes = [];
-    this.billboardTextureNumber = [];
-    this.objectColorRandom = [];
+    this.objectPositionLODs = [];
+    this.objectColorLODs = [];
+    this.objectScaleLODs = [];
+    this.objectRotationLODs = [];
+    this.objectPlantTypeLODs = [];
+    this.billboardPositionLODs = [];
+    this.billboardSizeLODs = [];
+    this.billboardTextureNumberLODs = [];
+    this.objectColorRandomLODs = [];
+    
+    for(var l = 0; l < levelsLOD; l++){
+        this.objectPositionLODs[l] = [];
+        this.objectColorLODs[l] = [];
+        this.objectScaleLODs[l] = [];
+        this.objectRotationLODs[l] = [];
+        this.objectPlantTypeLODs[l] = [];
+        this.billboardPositionLODs[l] = [];
+        this.billboardSizeLODs[l] = [];
+        this.billboardTextureNumberLODs[l] = [];
+        this.objectColorRandomLODs[l] = [];
+    }
     
     this.plantPositions = [];
     this.plantScales = [];
@@ -126,21 +138,93 @@ PlantDistribution = function(worldScale, worldWidth, worldDepth, plantTypes, lev
 
             billboardTN[j] = Math.floor(Math.random() * 4);
         }
-        this.objectColors[i] = colors;
-        this.objectPositions[i] = pos;
-        this.objectScales[i] = scales;
-        this.objectRotations[i] = rotations;
-        this.objectPlantType[i] = types;
-        this.billboardPositions[i] = billboardPos;
-        this.billboardSizes[i] = billboardSize;
-        this.objectColorRandom[i] = colorRandom;
-        this.billboardTextureNumber[i] = billboardTN;
+        this.objectColorLODs[levelsLOD-1][i] = colors;
+        this.objectPositionLODs[levelsLOD-1][i] = pos;
+        this.objectScaleLODs[levelsLOD-1][i] = scales;
+        this.objectRotationLODs[levelsLOD-1][i] = rotations;
+        this.objectPlantTypeLODs[levelsLOD-1][i] = types;
+        this.billboardPositionLODs[levelsLOD-1][i] = billboardPos;
+        this.billboardSizeLODs[levelsLOD-1][i] = billboardSize;
+        this.objectColorRandomLODs[levelsLOD-1][i] = colorRandom;
+        this.billboardTextureNumberLODs[levelsLOD-1][i] = billboardTN;
     }
     this.updateTerrainInformation(worldWidth, worldDepth, worldScale, offsetDist, plantTypes, locations, terrain);
+    this.generateLODs(levelsLOD);
 };
 
-PlantDistribution.prototype = Object.create( THREE.Object3D.prototype );
-    
+PlantDistribution.prototype.generateLODs = function(levelsLOD){
+
+    for(var i = levelsLOD-1; i > 0; i--){
+        var nWidth = Math.pow(2,(i));
+        var nDepth = Math.pow(2,(i));
+        var index = 0;
+        var length0,length1,length2,length3;
+        for(var ny = 0; ny < nDepth; ny+=2){
+            for(var nx = 0; nx < nWidth; nx+=2){
+                length0 = this.objectPositionLODs[i][nx + ny * nWidth].length;
+                length1 = this.objectPositionLODs[i][(nx + 1) + ny * nWidth].length;
+                length2 = this.objectPositionLODs[i][nx + (ny + 1) * nWidth].length;
+                length3 = this.objectPositionLODs[i][(nx + 1) + (ny + 1) * nWidth].length;
+
+                this.objectPositionLODs[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                this.objectPositionLODs[i-1][index].set(this.objectPositionLODs[i][nx + ny * nWidth],0); 
+                this.objectPositionLODs[i-1][index].set(this.objectPositionLODs[i][(nx + 1) + ny * nWidth],length0); 
+                this.objectPositionLODs[i-1][index].set(this.objectPositionLODs[i][nx + (ny + 1) * nWidth],length0 + length1);
+                this.objectPositionLODs[i-1][index].set(this.objectPositionLODs[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+
+                this.objectColorLODs[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                this.objectColorLODs[i-1][index].set(this.objectColorLODs[i][nx + ny * nWidth],0);
+                this.objectColorLODs[i-1][index].set(this.objectColorLODs[i][(nx + 1) + ny * nWidth],length0);
+                this.objectColorLODs[i-1][index].set(this.objectColorLODs[i][nx + (ny+1) * nWidth],length0 + length1);
+                this.objectColorLODs[i-1][index].set(this.objectColorLODs[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+
+                this.objectScaleLODs[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                this.objectScaleLODs[i-1][index].set(this.objectScaleLODs[i][nx + ny * nWidth],0);
+                this.objectScaleLODs[i-1][index].set(this.objectScaleLODs[i][(nx + 1) + ny * nWidth],length0);
+                this.objectScaleLODs[i-1][index].set(this.objectScaleLODs[i][nx + (ny+1) * nWidth],length0 + length1);
+                this.objectScaleLODs[i-1][index].set(this.objectScaleLODs[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+
+                this.objectRotationLODs[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                this.objectRotationLODs[i-1][index].set(this.objectRotationLODs[i][nx + ny * nWidth],0);
+                this.objectRotationLODs[i-1][index].set(this.objectRotationLODs[i][(nx + 1) + ny * nWidth],length0);
+                this.objectRotationLODs[i-1][index].set(this.objectRotationLODs[i][nx + (ny+1) * nWidth],length0 + length1);
+                this.objectRotationLODs[i-1][index].set(this.objectRotationLODs[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+
+                this.objectPlantTypeLODs[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
+                this.objectPlantTypeLODs[i-1][index].set(this.objectPlantTypeLODs[i][nx + ny * nWidth],0);
+                this.objectPlantTypeLODs[i-1][index].set(this.objectPlantTypeLODs[i][(nx + 1) + ny * nWidth],length0/3);
+                this.objectPlantTypeLODs[i-1][index].set(this.objectPlantTypeLODs[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
+                this.objectPlantTypeLODs[i-1][index].set(this.objectPlantTypeLODs[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
+
+                this.billboardPositionLODs[i-1][index] = new Float32Array((length0 + length1 + length2 + length3));
+                this.billboardPositionLODs[i-1][index].set(this.billboardPositionLODs[i][nx + ny * nWidth],0);
+                this.billboardPositionLODs[i-1][index].set(this.billboardPositionLODs[i][(nx + 1) + ny * nWidth],length0);
+                this.billboardPositionLODs[i-1][index].set(this.billboardPositionLODs[i][nx + (ny+1) * nWidth],(length0 + length1));
+                this.billboardPositionLODs[i-1][index].set(this.billboardPositionLODs[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2));
+
+                this.billboardSizeLODs[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
+                this.billboardSizeLODs[i-1][index].set(this.billboardSizeLODs[i][nx + ny * nWidth],0);
+                this.billboardSizeLODs[i-1][index].set(this.billboardSizeLODs[i][(nx + 1) + ny * nWidth],length0/3);
+                this.billboardSizeLODs[i-1][index].set(this.billboardSizeLODs[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
+                this.billboardSizeLODs[i-1][index].set(this.billboardSizeLODs[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
+
+                this.objectColorRandomLODs[i-1][index] = new Float32Array(length0 + length1 + length2 + length3);
+                this.objectColorRandomLODs[i-1][index].set(this.objectColorRandomLODs[i][nx + ny * nWidth],0);
+                this.objectColorRandomLODs[i-1][index].set(this.objectColorRandomLODs[i][(nx + 1) + ny * nWidth],length0);
+                this.objectColorRandomLODs[i-1][index].set(this.objectColorRandomLODs[i][nx + (ny+1) * nWidth],length0 + length1);
+                this.objectColorRandomLODs[i-1][index].set(this.objectColorRandomLODs[i][(nx + 1) + (ny + 1) * nWidth],length0 + length1 + length2);
+
+                this.billboardTextureNumberLODs[i-1][index] = new Float32Array((length0 + length1 + length2 + length3)/3);
+                this.billboardTextureNumberLODs[i-1][index].set(this.billboardTextureNumberLODs[i][nx + ny * nWidth],0);
+                this.billboardTextureNumberLODs[i-1][index].set(this.billboardTextureNumberLODs[i][(nx + 1) + ny * nWidth],length0/3);
+                this.billboardTextureNumberLODs[i-1][index].set(this.billboardTextureNumberLODs[i][nx + (ny+1) * nWidth],(length0 + length1)/3);
+                this.billboardTextureNumberLODs[i-1][index].set(this.billboardTextureNumberLODs[i][(nx + 1) + (ny + 1) * nWidth],(length0 + length1 + length2)/3);
+                index++;
+            }
+        }
+    }
+}
+
 PlantDistribution.prototype.calculateHeight = function(worldWidth, terrain, xpos, zpos) {
     var xf = Math.floor(xpos);
     var xc = Math.ceil(xpos);
