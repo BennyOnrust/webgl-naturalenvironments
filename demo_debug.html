@@ -106,7 +106,7 @@
                         var billboardsVisible = true;
                         var objectsVisible = false;
                         var terrainsVisible = true;
-                        var linesLODVisible = false;
+                        var linesLODVisible = true;
                         var plantVisible = true;
                         var waterVisible = true;
                         var threshT = [];
@@ -118,7 +118,6 @@
                         var plantBillboardSizes = [1000,1000,430,600,270,550,250];
                         var nTextures = [3, 4, 1, 3, 3, 4, 1];
                         
-                        var materialLines = new THREE.LineBasicMaterial({ color: "red" });
                         var offsetFrustum;
                         
                         var children = [];
@@ -129,7 +128,6 @@
                         var levelLODselected = 0;
                         var offsetLOD = .5;
                         var locations;
-                        var centerTerrains = [];
                         var terrainBoxes = [];
                         var transitionLength = 1.0;
                         
@@ -311,9 +309,7 @@
                                 renderTargetObjects = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, parameters );
                                 renderTargetBillboards = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, parameters );
                                 renderTargetBlend = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false } );
-                                
-                                var dataManager = new DataManager();
-                                
+                                                                
                                 var depthMaterial = new THREE.ShaderMaterial(ShaderLibrary['depthRGBA_instancing']);
                                 depthMaterial._shadowPass = true;
                                 
@@ -388,183 +384,44 @@
                                 
                                 // TERRAIN
                                 terrain = new Terrain(scale, worldWidth, worldDepth, heightScale, data, data2);
-                                
-                                customMaterialPhong = new THREE.ShaderMaterial( ShaderLibrary['terrainPhongNear']  );
-                                customMaterialLambert = new THREE.ShaderMaterial( ShaderLibrary['terrainPhongFar']  );
-                                
-                                var maxHeight = terrain.maxHeight;
-                                var terrainmesh = new THREE.Mesh(terrain.terrainGeometry, customMaterialPhong);
-                                terrainmesh.visible = false;
-                                
+                                                                
                                 // Calculate positions
                                 plantDistribution = new PlantDistribution(scale, worldWidth, worldDepth, plantTypes, levelsLOD, locations, terrain, plantModelSizes, plantBillboardSizes, billboardSizeMultiplier, offsetDist);
                                 
-                                terrains = [];
-                                linesLOD = [];
-                                terrainToObjectIDs = [];
                                 for (var l = 0; l < levelsLOD; l++){
-                                    terrains[l] = [];
-                                    linesLOD[l] = [];
-                                    centerTerrains[l] = [];
-                                    terrainToObjectIDs[l] = [];
-                                    terrainBoxes[l] = [];
-                                    
-                                    var nParents, parent, nTerrainBlocksWidth, nTerrainBlocksDepth, nWidth, nDepth; 
-                                    if(l === 0){
-                                        nParents = 1;
-                                        nTerrainBlocksWidth = 1;
-                                        nTerrainBlocksDepth = 1;
-                                        parent = terrainmesh;
-                                    }
-                                    else{
-                                        nParents = terrains[l-1].length;
-                                        nTerrainBlocksWidth = 2;
-                                        nTerrainBlocksDepth = 2;
-                                    }
                                     nWidth = Math.pow(2,l);
                                     nDepth = Math.pow(2,l);
                                     var tileSizeX = worldWidth / nWidth;
                                     var tileSizeY = worldDepth / nDepth;
-                                    var tid = 0;
-                                    
+
                                     threshT[l] = Math.sqrt(tileSizeX*tileSizeX + tileSizeY*tileSizeY) * scale;
                                     threshT2[l] = threshT[l] * 2.0;
-                                    for(var q = 0; q < nParents; q++) {
-                                        if(l !== 0){
-                                            parent = terrains[l-1][q];
-                                        }
-                                        var width, depth;
-                                        var parentWidth = Math.ceil(parent.geometry.boundingBox.size().x / scale);
-                                        var parentDepth = Math.ceil(parent.geometry.boundingBox.size().z / scale); 
-
-                                        var totWidth = 0;
-                                        var totDepth = 0;
-
-                                        var offsetWidth = 0;
-                                        var offsetDepth = 0;
-                                        var tBlockWidth = (parentWidth-1) / nTerrainBlocksWidth;
-                                        var tBlockDepth = (parentDepth-1) / nTerrainBlocksDepth;
-                                        var terrainBlockWidth = Math.floor(tBlockWidth);
-                                        var terrainBlockDepth = Math.floor(tBlockDepth);
-                                        var remainderWidth = (terrainBlockWidth - tBlockWidth) * nTerrainBlocksWidth;
-                                        var remainderDepth = (terrainBlockDepth - tBlockDepth) * nTerrainBlocksDepth;
-
-                                        var thresholdWidth, thresholdDepth;
-                                        if(remainderWidth > 0){
-                                            thresholdWidth = nTerrainBlocksWidth - remainderWidth;
-                                        }
-                                        else{
-                                            thresholdWidth = nTerrainBlocksWidth - (-1 * remainderWidth);
-                                            offsetWidth = 2;
-                                        }
-                                        thresholdWidth = Math.round(thresholdWidth);
-
-                                        if(remainderDepth > 0){
-                                            thresholdDepth = nTerrainBlocksDepth - remainderDepth;
-                                        }
-                                        else{
-                                            thresholdDepth = nTerrainBlocksDepth - (-1 * remainderDepth);
-                                            offsetDepth = 2;
-                                        }
-                                        thresholdDepth = Math.round(thresholdDepth);
-
-                                        for(var i = 0; i < nTerrainBlocksDepth; i++){
-                                            totWidth = 0;
-                                            for(var j = 0; j < nTerrainBlocksWidth; j++){
-                                                if (i >= thresholdDepth){
-                                                    depth = terrainBlockDepth + offsetDepth;
-                                                }
-                                                else{
-                                                    depth = terrainBlockDepth+1;
-                                                }
-                                                if(j >= thresholdWidth){
-                                                    width = terrainBlockWidth + offsetWidth;
-                                                }
-                                                else{
-                                                    width = terrainBlockWidth+1;
-                                                }
-                                                
-                                                terrains[l][tid] = generateTerrainQuad(width,depth,totWidth,totDepth,parent, customMaterialLambert);
-                                                sceneBillboard.add( terrains[l][tid] );
-
-                                                linesLOD[l][tid] = drawLines(terrains[l][tid]);
-                                                sceneBillboard.add( linesLOD[l][tid] );
-                                                
-                                                centerTerrains[l][tid] = new THREE.Vector3();
-                                                
-                                                var terrainSize = terrains[l][tid].geometry.boundingBox.size();
-                                                var terrainMinimum = terrains[l][tid].geometry.boundingBox.min;
-                                                centerTerrains[l][tid].x = terrainMinimum.x + (terrainSize.x / 2);
-                                                centerTerrains[l][tid].z = terrainMinimum.z + (terrainSize.z / 2);
-                                                terrainBoxes[l][tid] = new THREE.Box2();
-                                                terrainBoxes[l][tid].setFromCenterAndSize(new THREE.Vector2(centerTerrains[l][tid].x,centerTerrains[l][tid].z), new THREE.Vector2(terrainSize.x,terrainSize.z));
-
-                                                var tMinScaledX = terrainMinimum.x / scale;
-                                                var tMinScaledZ = terrainMinimum.z / scale;
-                                                tMinScaledX += worldWidth/2;
-                                                tMinScaledZ += worldDepth/2;
-                                                
-                                                var nxn = tMinScaledX / tileSizeX;
-                                                var nyn = tMinScaledZ / tileSizeY;
-                                                var nx = Math.round(nxn);
-                                                var ny = Math.round(nyn);
-                                                
-                                                terrainToObjectIDs[l][tid] = nx + ny * nWidth;
-
-                                                totWidth += (width-1);
-
-                                                tid++; 
-                                            }
-                                            totDepth += (depth-1);
-                                        }
-                                    }
                                 }
                                 thresholdNear = threshT[levelsLOD-1];
                                 
-                                customMaterialPhong.uniforms.grassTexture.value = grassTexture;
-                                customMaterialPhong.uniforms.mudTexture.value = mudTexture;
-                                customMaterialPhong.uniforms.heightScale.value = maxHeight;
-                                customMaterialPhong.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                customMaterialPhong.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
-                                customMaterialPhong.uniforms.normalMap.value = mudNormal;
-                                customMaterialPhong.uniforms.normalScale.value = new THREE.Vector2(1.1,1.1);
-                                customMaterialPhong.uniforms.environmentCube.value = skyboxTexture;
-                                                                
-                                customMaterialLambert.uniforms.grassTexture.value = grassTexture;
-                                customMaterialLambert.uniforms.mudTexture.value = mudTexture;
-                                customMaterialLambert.uniforms.heightScale.value = maxHeight;
-                                customMaterialLambert.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                customMaterialLambert.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
-                                customMaterialLambert.uniforms.threshLODNear.value = thresholdBillboard - transitionZoneBillboards * offsetLODTerrain;
-                                customMaterialLambert.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards * offsetLODTerrain;
-                                customMaterialLambert.uniforms.farawayTexture.value = farawayTextureMap;
-                                customMaterialLambert.uniforms.normalMap.value = mudNormal;
-                                customMaterialLambert.uniforms.normalScale.value = new THREE.Vector2(1.1,1.1);
-                                customMaterialLambert.uniforms.environmentCube.value = skyboxTexture;
-                                customMaterialLambert.uniforms.overlayFactor.value = overlayFactor;
+                                terrain.generateLODStructure(levelsLOD, worldWidth,worldDepth, scale);
+                                terrain.generateMaterial(grassTexture, mudTexture, thresholdNear, offsetLOD, transitionZone, mudNormal, skyboxTexture, thresholdBillboard, transitionZoneBillboards, offsetLODTerrain, farawayTextureMap, overlayFactor);
+                                terrain.generateMeshesLOD(levelsLOD, scale);
+                                sceneObject.add(terrain.terrainNear);
+                                sceneObject.add(terrain.linesNear);
+                                sceneBillboard.add(terrain.terrainFar);
+                                sceneBillboard.add(terrain.linesFar);
                                 
                                 waterObject.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
                                 waterObject.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                                 
                                 waterBillboard.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
                                 waterBillboard.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                                                                                
+                                terrains = terrain.terrainFarLODs;
+                                linesLOD = terrain.linesLOD;
+                                terrainToObjectIDs = terrain.terrainToObjectIDs;
+                                terrainBoxes = terrain.terrainBoxes;
+                                terrainObjects = terrain.terrainNearLODs;
                                 
                                 var offsetX = terrains[levelsLOD-1][0].geometry.boundingBox.size().x;
                                 var offsetZ = terrains[levelsLOD-1][0].geometry.boundingBox.size().z;
-                                
                                 offsetFrustum =  -1 * (offsetX + offsetZ);
-                                
-                                terrainObjects = [];
-                                for(var i = 0; i < terrains[levelsLOD-1].length; i++){
-                                    terrainObjects[i] = new THREE.Mesh(terrains[levelsLOD-1][i].geometry,customMaterialPhong);
-                                    terrainObjects[i].frustumCulled = false;
-                                    terrainObjects[i].autoupdate = false;
-                                    terrainObjects[i].visible = false;
-                                    terrainObjects[i].updateMatrix();
-                                    terrainObjects[i].castShadow = false;
-                                    terrainObjects[i].receiveShadow = true;
-                                    sceneObject.add(terrainObjects[i]);
-                                }
                                 
                                 console.log("merging");
                                 var objectPositionMerged = [];
@@ -664,7 +521,6 @@
                                         }
                                     }
                                 }
-                                
                                 
                                 var plantPositions = [];
                                 var plantRotations = [];
@@ -876,9 +732,6 @@
                                                                 
                                 console.log("Finished instance object generation");
                                 
-                                var fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
-                                fxaaPass.uniforms.resolution.value = new THREE.Vector2(1/pixelWidth,1/pixelHeight);
-                                fxaaPass.renderToScreen = true;
                                 //Billboards processing
                                 var composerBillboards = new THREE.EffectComposer( renderer, renderTargetBillboards );
                                 
@@ -904,7 +757,6 @@
                                 var composerBlending = new THREE.EffectComposer( renderer, renderTargetBlend );
                                 var blendPassObjects = new THREE.ShaderPass(THREE.BlendAdvancedShader);
                                 var copyPassBlend = new THREE.ShaderPass(THREE.CopyShader);
-                                fxaaPass.uniforms.tDiffuse.value = renderTargetObjects;
                                 copyPassBlend.renderToScreen = true;
                                 blendPassObjects.uniforms.tDiffuse1.value = composerObjects.renderTarget1;
                                 blendPassObjects.uniforms.tDiffuse2.value = composerBillboards.renderTarget1;
@@ -1008,10 +860,10 @@
                                 instancingMaterials[t].uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                             }
                             
-                            customMaterialPhong.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                            customMaterialPhong.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
-                            customMaterialLambert.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                            customMaterialLambert.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            terrain.materialNear.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            terrain.materialNear.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            terrain.materialFar.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            terrain.materialFar.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                             
                             waterObject.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
                             waterObject.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
@@ -1033,10 +885,10 @@
                                     instancingMaterials[t].uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                                 }
                                 
-                                customMaterialPhong.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                customMaterialPhong.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
-                                customMaterialLambert.uniforms.threshNear.value = thresholdNear * offsetLOD;
-                                customMaterialLambert.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                terrain.materialNear.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                terrain.materialNear.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                terrain.materialFar.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                terrain.materialFar.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                                 waterObject.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
                                 waterObject.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
                                 
@@ -1047,8 +899,8 @@
                         
                         function increaseFarLOD(){
                             thresholdBillboard += 2 * scale;
-                            customMaterialLambert.uniforms.threshLODNear.value = thresholdBillboard - transitionZoneBillboards * offsetLODTerrain;
-                            customMaterialLambert.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards * offsetLODTerrain;
+                            terrain.materialFar.uniforms.threshLODNear.value = thresholdBillboard - transitionZoneBillboards * offsetLODTerrain;
+                            terrain.materialFar.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards * offsetLODTerrain;
                             
                             customMaterialBillboards.uniforms.threshLODNear.value = thresholdBillboard;
                             customMaterialBillboards.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards;
@@ -1056,8 +908,8 @@
                         
                         function decreaseFarLOD(){
                             thresholdBillboard -= 2 * scale;
-                            customMaterialLambert.uniforms.threshLODNear.value = thresholdBillboard - transitionZoneBillboards * offsetLODTerrain;
-                            customMaterialLambert.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards * offsetLODTerrain;
+                            terrain.materialFar.uniforms.threshLODNear.value = thresholdBillboard - transitionZoneBillboards * offsetLODTerrain;
+                            terrain.materialFar.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards * offsetLODTerrain;
                             
                             customMaterialBillboards.uniforms.threshLODNear.value = thresholdBillboard;
                             customMaterialBillboards.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards;
@@ -1066,187 +918,7 @@
                         function distance(x1,y1,x2,y2){
                             return Math.sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1));
                         }
-                        
-                        function generateTerrainQuad(width,depth,startWidth,startDepth,parentTerrainQuad, customMaterialPhong){
-                            var positions = parentTerrainQuad.geometry.attributes.position.array;
-                            var indices = parentTerrainQuad.geometry.attributes.index.array;
-                            var normals = parentTerrainQuad.geometry.attributes.normal.array;
-                            var uvs = parentTerrainQuad.geometry.attributes.uv.array;
-                            var nPlants = parentTerrainQuad.geometry.attributes.nPlants.array;
-                            var tColors = parentTerrainQuad.geometry.attributes.tColor.array;
-                            var tTypes = parentTerrainQuad.geometry.attributes.tType.array;
-                            
-                            var parentWidth = Math.ceil(parentTerrainQuad.geometry.boundingBox.size().x / scale);
-                            
-                            var positions2 = new Float32Array( width * depth * 3 );
-                            var indices2 = new Uint32Array( (width-1) * (depth-1) * 6 );   
-                            var normals2 = new Float32Array( width * depth * 3 );
-                            var uvs2 = new Float32Array( width * depth * 2 );
-                            var nPlants2 = new Float32Array( width * depth);
-                            var tColors2 = new Float32Array( width * depth * 3);
-                            var tTypes2 = new Float32Array( width * depth );
-
-                            var index = 0;
-                            var index2 = 0;
-                            // should be updated when different planeblocks are created
-                            var startIndex = startWidth + startDepth * (parentWidth-1);
-                            var startInd = indices[startIndex*6];
-                            for(var bd  = 0; bd < depth-1; bd++){
-                                index = startIndex*6 + bd * (parentWidth-1) * 6;
-                                for(var bw = 0; bw < width-1; bw++){
-                                    var i0 = indices[index+0];
-                                    var i1 = indices[index+1];
-                                    var i2 = indices[index+2];
-                                    var i3 = indices[index+3];
-                                    var i4 = indices[index+4];
-                                    var i5 = indices[index+5];
-                                    var h0 = positions[i0*3+1];
-                                    var h1 = positions[i1*3+1];
-                                    var h2 = positions[i2*3+1];
-                                    var h3 = positions[i3*3+1];
-                                    var h4 = positions[i4*3+1];
-                                    var h5 = positions[i5*3+1];
-                                    i0 -= bd * (parentWidth - width);
-                                    i1 -= bd * (parentWidth - width);
-                                    i2 -= bd * (parentWidth - width);
-                                    i3 -= bd * (parentWidth - width);
-                                    i4 -= bd * (parentWidth - width);
-                                    i5 -= bd * (parentWidth - width);
-                                    var avgi = (i0 + i2 + i2 + i3 + i4 + i5) / 6;
-                                    var i0n = i0 - startInd - (i0 > avgi) * (parentWidth - width);
-                                    var i1n = i1 - startInd - (i1 > avgi) * (parentWidth - width);
-                                    var i2n = i2 - startInd - (i2 > avgi) * (parentWidth - width);
-                                    var i3n = i3 - startInd - (i3 > avgi) * (parentWidth - width);
-                                    var i4n = i4 - startInd - (i4 > avgi) * (parentWidth - width);
-                                    var i5n = i5 - startInd - (i5 > avgi) * (parentWidth - width);
-
-                                    //if(h0 > scale*.025 && h1 > scale*.025 && h2 > scale*.025){
-                                    indices2[index2+0] = i0n;
-                                    indices2[index2+1] = i1n;
-                                    indices2[index2+2] = i2n;
-                                    index2 += 3;
-                                    //}
-                                    //if(h3 > scale*.025 && h4 > scale*.025 && h5 > scale*.025){
-                                    indices2[index2+0] = i3n;
-                                    indices2[index2+1] = i4n;
-                                    indices2[index2+2] = i5n;
-                                    index2 += 3;
-                                    //}
-                                    index += 6;                                            
-                                }
-                            }
-
-                            var index1 = 0;
-                            var index2 = 0;
-                            var index3 = 0;
-                            var index4 = 0;
-                            var index5 = 0;
-                            var index6 = 0;
-                            var startIndex = startWidth + startDepth * (parentWidth-0);
-                            for(var bd  = 0; bd < depth; bd++){
-                                index1 = startIndex * 3 + bd * (parentWidth-0) * 3;
-                                index3 = startIndex * 2 + bd * (parentWidth-0) * 2;
-                                index5 = startIndex * 1 + bd * (parentWidth-0) * 1;
-                                for(var bw = 0; bw < width; bw++){
-                                    positions2[index2+0] = positions[index1+0];
-                                    positions2[index2+1] = positions[index1+1];
-                                    positions2[index2+2] = positions[index1+2];
-                                    normals2[index2+0] = normals[index1+0];
-                                    normals2[index2+1] = normals[index1+1];
-                                    normals2[index2+2] = normals[index1+2];
-                                    uvs2[index4+0] = uvs[index3+0];
-                                    uvs2[index4+1] = uvs[index3+1];
-                                    nPlants2[index6] = nPlants[index5];
-                                    tColors2[index2+0] = tColors[index1+0];
-                                    tColors2[index2+1] = tColors[index1+1];
-                                    tColors2[index2+2] = tColors[index1+2];
-                                    tTypes2[index6] = tTypes[index5];
-
-                                    index1 += 3;
-                                    index2 += 3;
-                                    index3 += 2;
-                                    index4 += 2;
-                                    index5 += 1;
-                                    index6 += 1;
-                                }
-                            }
-
-                            var geometryBlock = new THREE.BufferGeometry();
-
-                            geometryBlock.addAttribute( 'index', new THREE.BufferAttribute( indices2, 1 ) );
-                            geometryBlock.addAttribute( 'position', new THREE.BufferAttribute( positions2, 3 ) );
-                            geometryBlock.addAttribute( 'normal', new THREE.BufferAttribute( normals2, 3 ) );
-                            geometryBlock.addAttribute( 'uv', new THREE.BufferAttribute( uvs2, 2 ) );
-                            geometryBlock.addAttribute( 'nPlants', new THREE.BufferAttribute( nPlants2, 1 ) );
-                            geometryBlock.addAttribute( 'tColor', new THREE.BufferAttribute( tColors2, 3 ) );
-                            geometryBlock.addAttribute( 'tType', new THREE.BufferAttribute( tTypes2, 1 ) );
-
-                            geometryBlock.computeBoundingSphere();
-                            geometryBlock.computeBoundingBox();
-                            var terrainQuad = new THREE.Mesh(geometryBlock, customMaterialPhong);
-                            terrainQuad.frustumCulled = false;
-                            terrainQuad.autoupdate = false;
-                            terrainQuad.visible = false;
-                            terrainQuad.updateMatrix();
-                            return terrainQuad;
-                        }
-                        
-                        function drawLines(mesh){
-                            //Draw Level of Detail lines
-                            var meshPositions = mesh.geometry.attributes.position.array;
-                            var size = mesh.geometry.boundingBox.size();
-                            var width = Math.ceil(size.x / scale)+0;
-                            var depth = Math.ceil(size.z / scale)+0;
-                            
-                            var geometryLines = new THREE.BufferGeometry();
-                            var positionsLines = new Float32Array((depth-1.5)*2*3 + (width)*2*3);
-                            var indexLine = 0;
-                            
-                            for(var i = 0; i < width*3; i+=3){
-                                positionsLines[indexLine+0] = meshPositions[i + 0];
-                                positionsLines[indexLine+1] = meshPositions[i + 1] + scale * 0.05;
-                                positionsLines[indexLine+2] = meshPositions[i + 2];
-                                indexLine += 3;
-                            }
-                            
-                            var startIndex = (width-1)*3;
-                            for(var i = 3; i < (depth-1)*3; i+=3){
-                                positionsLines[indexLine+0] = meshPositions[startIndex+i*width + 0];
-                                positionsLines[indexLine+1] = meshPositions[startIndex+i*width + 1] + scale * 0.05;
-                                positionsLines[indexLine+2] = meshPositions[startIndex+i*width + 2];
-                                indexLine += 3;
-                            }
-                            
-                            startIndex = width*(depth-1)*3;
-                            for(var i = (width-1)*3; i >= 0; i-=3){
-                                positionsLines[indexLine+0] = meshPositions[startIndex+i + 0];
-                                positionsLines[indexLine+1] = meshPositions[startIndex+i + 1] + scale * 0.05;
-                                positionsLines[indexLine+2] = meshPositions[startIndex+i + 2];
-                                indexLine += 3;
-                            }
-                            
-                            var startIndex = 0;
-                            for(var i = (depth-2)*3; i >= 0; i-=3){
-                                positionsLines[indexLine+0] = meshPositions[startIndex+i*width + 0];
-                                positionsLines[indexLine+1] = meshPositions[startIndex+i*width + 1] + scale * 0.05;
-                                positionsLines[indexLine+2] = meshPositions[startIndex+i*width + 2];
-                                indexLine += 3;
-                            }
-                            
-                            
-                            geometryLines.addAttribute( 'position', new THREE.BufferAttribute( positionsLines, 3 ) );
-                            geometryLines.computeBoundingSphere();
-                            
-                            var lineLOD = new THREE.Line(geometryLines, materialLines);
-                            
-                            lineLOD.frustumCulled = false;
-                            lineLOD.autoupdate = false;
-                            lineLOD.visible = false;
-                            lineLOD.updateMatrix();
-                            
-                            return lineLOD;
-                        }
-                        
+                          
                         function getHeight(img) {
                                 var canvas = document.createElement('canvas');
                                 canvas.width = img.width;
@@ -1413,7 +1085,6 @@
                         
                         function plantVisibility(){
                             if(plantVisible){
-                                //customMaterialBillboards.uniforms.scale.value = 500;
                                 customMaterialBillboards.uniforms.billboardTextureAtlas.value = billboardTextureMap;
                             }
                         }
@@ -1427,13 +1098,13 @@
                            plantVisible = false;
                            
                            if(objectsVisible){
-                                //customMaterialBillboards.uniforms.scale.value = scale * 1.0;
                                 customMaterialBillboards.uniforms.billboardTextureAtlas.value = billboardTextures;
                            }
                         }
                         
                         function terrainsVisibility(){
-                            terrainsVisible = !terrainsVisible;
+                            terrain.terrainNear.visible = !terrain.terrainNear.visible;
+                            terrain.terrainFar.visible = !terrain.terrainFar.visible;
                         }
                         
                         function linesLODVisibility(){
@@ -1465,12 +1136,12 @@
                                 if(overlayStatus && overlayFactor < 0.2){
                                     overlayFactor += 0.005;
                                     customMaterialBillboards.uniforms.overlayFactor.value = overlayFactor * 2;
-                                    customMaterialLambert.uniforms.overlayFactor.value = overlayFactor;
+                                    terrain.materialFar.uniforms.overlayFactor.value = overlayFactor;
                                 }
                                 else if(!overlayStatus && overlayFactor > 0.0){
                                     overlayFactor -= 0.005;
                                     customMaterialBillboards.uniforms.overlayFactor.value = overlayFactor * 2;
-                                    customMaterialLambert.uniforms.overlayFactor.value = overlayFactor;
+                                    terrain.materialFar.uniforms.overlayFactor.value = overlayFactor;
                                 }
                                 
                                 worldCoordinates = new THREE.Vector3();
@@ -1505,7 +1176,7 @@
                                                 bboxT = terrains[l][i].geometry.boundingBox;
                                                 frustT = frustum.containsBox( bboxT, offsetFrustum );
                                                 if (frustT === 0 && !objectRange && !billboardRange){
-                                                    terrains[l][i].visible = terrainsVisible && true;
+                                                    terrains[l][i].visible = true;
                                                     linesLOD[l][i].visible = linesLODVisible && true;
                                                     billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && false;
                                                     childrenNew[i*4 + 0] = false;
@@ -1514,7 +1185,7 @@
                                                     childrenNew[i*4 + 3] = false;
                                                 }
                                                 else if (frustT === 0 && !objectRange && billboardRange){
-                                                    terrains[l][i].visible = terrainsVisible && true;
+                                                    terrains[l][i].visible = true;
                                                     linesLOD[l][i].visible = linesLODVisible && true;
                                                     billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
                                                     childrenNew[i*4 + 0] = false;
@@ -1561,8 +1232,8 @@
                                                 dist = terrainBoxes[l][i].distanceToPoint(camPos) < maxDist;
 
                                                 if(frustT && objectRange && dist){
-                                                    terrains[l][i].visible = terrainsVisible && true;
-                                                    terrainObjects[i].visible = terrainsVisible && true;
+                                                    terrains[l][i].visible = true;
+                                                    terrainObjects[levelsLOD-1][i].visible = true;
                                                     linesLOD[l][i].visible = linesLODVisible && true;
                                                     objects[terrainToObjectIDs[l][i]].visible = objectsVisible && true;
                                                     for(var t = 0; t < plantTypes.length; t++){
@@ -1571,9 +1242,9 @@
                                                     billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
                                                 }
                                                 else if(frustT){
-                                                    terrains[l][i].visible = terrainsVisible && true;
+                                                    terrains[l][i].visible = true;
                                                     linesLOD[l][i].visible = linesLODVisible && true;
-                                                    terrainObjects[i].visible = false;
+                                                    terrainObjects[levelsLOD-1][i].visible = false;
                                                     objects[terrainToObjectIDs[l][i]].visible = false;
                                                     for(var t = 0; t < plantTypes.length; t++){
                                                         plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
@@ -1583,7 +1254,7 @@
                                                 else{
                                                     terrains[l][i].visible = false;
                                                     linesLOD[l][i].visible = false;
-                                                    terrainObjects[i].visible = false;
+                                                    terrainObjects[levelsLOD-1][i].visible = false;
                                                     objects[terrainToObjectIDs[l][i]].visible = false;
                                                     for(var t = 0; t < plantTypes.length; t++){
                                                         plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
@@ -1594,7 +1265,7 @@
                                             else{
                                                 terrains[l][i].visible = false;
                                                 linesLOD[l][i].visible = false;
-                                                terrainObjects[i].visible = false;
+                                                terrainObjects[levelsLOD-1][i].visible = false;
                                                 objects[terrainToObjectIDs[l][i]].visible = false;
                                                 for(var t = 0; t < plantTypes.length; t++){
                                                     plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
