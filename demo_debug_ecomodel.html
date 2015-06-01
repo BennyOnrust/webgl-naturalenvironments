@@ -83,7 +83,7 @@
                                                 
                         var billboards, objects, terrains, terrainObjects, plantModels;
 
-                        var scale = 2;
+                        var scale = 1;
                         var images;
                         var frustum = new THREE.Frustum();
                         var billboardsVisible = true;
@@ -97,9 +97,9 @@
                         var overlayStatus = false;
                         var overlayFactor = 0.0;
                         
-                        var plantTypes = ["Elymus", "Spartina", "Atriplex", "Aster", "Limonium" ,"Artemisia", "Salicornia"];
-                        var plantBillboardSizes = [1000,1000,430,600,270,550,250];
-                        var nTextures = [3, 4, 1, 3, 3, 4, 1];
+                        var plantTypes = ["Spartina", "Aster", "Salicornia"];
+                        var plantBillboardSizes = [1000,600,250];
+                        var nTextures = [4, 3, 1];
                         
                         var offsetFrustum;
                         
@@ -153,7 +153,7 @@
                             qualityMultiplier = 1.0;
                             billboardSizeMultiplier = 6;
                             thresholdBillboard = 250 * scale;
-                            heightScale = 4;
+                            heightScale = 3;
                             offsetDist = .3;
                             plantModelSizes = [0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier,
                                 0.2*scale*qualityMultiplier,0.23*scale*qualityMultiplier,0.15*scale*qualityMultiplier,
@@ -182,8 +182,8 @@
                                 0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier];
                         }
                         
-                        heightImageLink1 = "images/heightMap_Paulinapolder.png";
-                        heightImageLink2 = "images/heightMap_Paulinapolder_v2.png";
+                        heightImageLink1 = "images/heightMap_Ecomodel.png";
+                        heightImageLink2 = "images/heightMap_Ecomodel_v2.png";
 
                         mudImageLink = 'images/mudTilingColor.png';
                         grassImageLink = 'images/grassTilingColor.png';
@@ -192,7 +192,7 @@
                         skyBoxImagePath = 'images/skybox/';
 
                         if(quality === 0.0){
-                            locationsTextLink = "data/locations.txt";
+                            locationsTextLink = "data/locations_ecomodel.txt";
                         }
                         else if(quality === 1.0){
                             locationsTextLink = "data/locations_08.txt";
@@ -238,7 +238,7 @@
                                                 
                         preloadimages([heightImageLink1,heightImageLink2]).done(function(loadedImages){
                             images = loadedImages;
-                            preLoadPlantModel([modelElymusObjLink,modelElymusMtlLink, modelSpartinaObjLink,modelSpartinaMtlLink, modelAtriplexObjLink,modelAtriplexMtlLink, modelAsterObjLink,modelAsterMtlLink, modelLimoniumObjLink,modelLimoniumMtlLink, modelArtemisiaObjLink,modelArtemisiaMtlLink, modelSalicorniaObjLink,modelSalicorniaMtlLink]).done(function(loadedModels){
+                            preLoadPlantModel([modelSpartinaObjLink,modelSpartinaMtlLink,modelAsterObjLink,modelAsterMtlLink,modelSalicorniaObjLink,modelSalicorniaMtlLink]).done(function(loadedModels){
                                 plantModels = loadedModels;
                                 preLoadLocations(locationsTextLink).done(function(loadedLocations){
                                     locations = loadedLocations;
@@ -338,13 +338,9 @@
                                 
                                 var plantModelMaterials = [];
 
-                                plantModelMaterials[0] = THREE.ImageUtils.loadTexture( texturesElymusLink );
-                                plantModelMaterials[1] = THREE.ImageUtils.loadTexture( texturesSpartinaLink );
-                                plantModelMaterials[2] = THREE.ImageUtils.loadTexture( texturesAtriplexLink );
-                                plantModelMaterials[3] = THREE.ImageUtils.loadTexture( texturesAsterLink );
-                                plantModelMaterials[4] = THREE.ImageUtils.loadTexture( texturesLimoniumLink );
-                                plantModelMaterials[5] = THREE.ImageUtils.loadTexture( texturesArtemisiaLink );
-                                plantModelMaterials[6] = THREE.ImageUtils.loadTexture( texturesSalicorniaLink );
+                                plantModelMaterials[0] = THREE.ImageUtils.loadTexture( texturesSpartinaLink );
+                                plantModelMaterials[1] = THREE.ImageUtils.loadTexture( texturesAsterLink );
+                                plantModelMaterials[2] = THREE.ImageUtils.loadTexture( texturesSalicorniaLink );
                                 
                                 for(var t = 0; t < plantTypes.length; t++){
                                     plantModelMaterials[t].magFilter = THREE.LinearFilter;
@@ -356,10 +352,6 @@
                                 lightsBillboard = new Lights(scale, camera.fov, "billboard");
                                 sceneObject.add(lightsObject);
                                 sceneBillboard.add(lightsBillboard);
-                                
-                                // DIKE
-                                var dikeMesh = new Dike(scale, heightScale, dike, dikeTexture);
-                                sceneBillboard.add(dikeMesh);                              
                                 
                                 // SKYBOX                                
                                 var skybox = new Skybox(scale, skyboxTexture);
