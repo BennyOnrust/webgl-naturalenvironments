@@ -129,6 +129,7 @@
                         var then = Date.now();
                         var interval = 1000/fps;
                         var delta;
+                        var nPlantTextures = 3.0
                         
                         var distT, bboxT, dist, frustT, distT2, objectRange, billboardRange;
                         var objectBox = new THREE.Box2();
@@ -431,7 +432,7 @@
                                 console.log("Billboard creation");
                                                                 
                                 // Billboards
-                                billboardDistribution = new BillboardDistribution(billboardTextureMap,thresholdNear,offsetLOD, transitionZone, thresholdBillboard, transitionZoneBillboards, overlayFactor, plantDistribution, levelsLOD);
+                                billboardDistribution = new BillboardDistribution(billboardTextureMap,thresholdNear,offsetLOD, transitionZone, thresholdBillboard, transitionZoneBillboards, overlayFactor, plantDistribution, levelsLOD,nPlantTextures);
                                 sceneBillboard.add(billboardDistribution);
                                 
                                 console.log("Billboard creation finished");

@@ -83,7 +83,7 @@
                                                 
                         var billboards, objects, terrains, terrainObjects, plantModels;
 
-                        var scale = 1;
+                        var scale = 2;
                         var images;
                         var frustum = new THREE.Frustum();
                         var billboardsVisible = true;
@@ -139,6 +139,7 @@
                         var transitionZoneBillboards = 35 * scale;
                         var offsetLODTerrain = 0.3;
                         var worldCoordinates;
+                        var nPlantTextures = 2.0;
                         
                         var quality = 0.0;
                         var qualityMultiplier;
@@ -228,7 +229,7 @@
                         billboardTextureMapLink = "Billboards/Billboards_Mipmap_1024.tga";
                         billboardTextureMapLink = "Billboards/Billboards_Mipmap_2048.tga";
                         billboardTextureMapLink = "Billboards/Billboards_Mipmap_4096.tga";
-                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_4096_Repetition.tga";
+                        billboardTextureMapLink = "Billboards/Billboard_mipmap_ecomodel.tga";
                         farawayTextureMapLink = "Billboards/Billboards_Mipmap_1024_background.tga";
                         dikeModelObjLink = "Models/dijk.obj";
                         dikeModelTextureLink = "Models/Textures/dykeTilingColor.png";
@@ -423,7 +424,7 @@
                                 console.log("Billboard creation");
                                                                 
                                 // Billboards
-                                billboardDistribution = new BillboardDistribution(billboardTextureMap,thresholdNear,offsetLOD, transitionZone, thresholdBillboard, transitionZoneBillboards, overlayFactor, plantDistribution, levelsLOD);
+                                billboardDistribution = new BillboardDistribution(billboardTextureMap,thresholdNear,offsetLOD, transitionZone, thresholdBillboard, transitionZoneBillboards, overlayFactor, plantDistribution, levelsLOD,nPlantTextures);
                                 sceneBillboard.add(billboardDistribution);
                                 
                                 console.log("Billboard creation finished");

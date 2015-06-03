@@ -1,4 +1,4 @@
-BillboardDistribution = function(billboardTextureMap,thresholdNear,offsetLOD, transitionZone, thresholdBillboard, transitionZoneBillboards, overlayFactor, plantDistribution, levelsLOD){
+BillboardDistribution = function(billboardTextureMap,thresholdNear,offsetLOD, transitionZone, thresholdBillboard, transitionZoneBillboards, overlayFactor, plantDistribution, levelsLOD, nPlantTextures){
     THREE.Object3D.call( this );
     
     this.billboardMaterial = new THREE.ShaderMaterial(ShaderLibrary['billboard']);
@@ -13,6 +13,7 @@ BillboardDistribution = function(billboardTextureMap,thresholdNear,offsetLOD, tr
     this.billboardMaterial.sizeAttenuation = true;
     this.billboardMaterial.uniforms.nTypes.value = 3;
     this.billboardMaterial.uniforms.overlayFactor.value = overlayFactor;
+    this.billboardMaterial.uniforms.nPlantTextures.value = nPlantTextures;
     for( var l = 0; l < levelsLOD; l++){
         this.billboards[l] = [];
         for(var i = 0; i < plantDistribution.objectPositionLODs[l].length; i++){

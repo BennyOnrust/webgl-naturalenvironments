@@ -560,6 +560,7 @@ ShaderLibrary = {
                 "threshLODNear" : {type: "f", value: 1.0},
                 "threshLODFar" : {type: "f", value: 1.0},
                 "overlayFactor" : {type: "f", value: 0.0},
+                "nPlantTextures" : {type: "f", value: 1.0},
         },
         attributes: {
 
@@ -576,6 +577,7 @@ ShaderLibrary = {
                 "uniform float threshFar;",
                 "uniform float threshLODNear;",
                 "uniform float threshLODFar;",
+                "uniform float nPlantTextures;",
 
                 "attribute float plantType;",
                 "attribute vec3 colorInstance;",
@@ -586,8 +588,8 @@ ShaderLibrary = {
                 "void main() {",
                 "       vColorInstance.xyz = colorInstance;",
                 "	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );",
-                "       vUvBillboard.x = floor(mod(textureNumber+0.5,2.0)) * 0.5 + floor(mod(plantType+0.5,3.0)) * (1.0/6.0);",
-                "       vUvBillboard.y = floor((textureNumber+0.5)/2.0) * 0.5 + floor((plantType+0.5)/3.0) * (1.0/6.0);",
+                "       vUvBillboard.x = floor(mod(textureNumber+0.5,2.0)) * 0.5 + floor(mod(plantType+0.5,nPlantTextures)) * (1.0/(2.0 * nPlantTextures));",
+                "       vUvBillboard.y = floor((textureNumber+0.5)/2.0) * 0.5 + floor((plantType+0.5)/nPlantTextures) * (1.0/(2.0 * nPlantTextures));",
                 "       float dist = distance(cameraPosition.xz,position.xz);",
                 "       float thresh = threshFar - threshNear;",
                 "       float newDist = dist - threshNear;",
@@ -611,6 +613,7 @@ ShaderLibrary = {
                 "uniform sampler2D billboardTextureAtlas;",
                 "uniform float nTypes;",
                 "uniform float overlayFactor;",
+                "uniform float nPlantTextures;",
                 
                 "varying vec2 vUvBillboard;",
                 "varying vec4 vColorInstance;",
@@ -618,7 +621,7 @@ ShaderLibrary = {
                 "void main() {",
 
 //                "   vec4 tColor = texture2D(billboardTextureAtlas, vec2((gl_PointCoord.x + floor(mod(vUvBillboard+.5,nTypes))) * (1.0/nTypes),1.0 - (gl_PointCoord.y + floor((vUvBillboard+0.5)/nTypes)) * (1.0/nTypes)));",
-                "   vec4 tColor = texture2D(billboardTextureAtlas, vec2(gl_PointCoord.x * (1.0/6.0) + vUvBillboard.x,1.0 - (gl_PointCoord.y * (1.0/6.0) + vUvBillboard.y)));",
+                "   vec4 tColor = texture2D(billboardTextureAtlas, vec2(gl_PointCoord.x * (1.0/(2.0*nPlantTextures)) + vUvBillboard.x,1.0 - (gl_PointCoord.y * (1.0/(2.0* nPlantTextures)) + vUvBillboard.y)));",
                 "   if (tColor.a < 0.3) discard;",
                 "   gl_FragColor = mix(vec4(tColor.xyz,1.0) * vColorInstance,vec4(1.0,0.0,0.0,1.0), overlayFactor);",
                 "}"
