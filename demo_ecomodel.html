@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>WebGL/three.js - 3D natural environments</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #fff;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+
+				background-color: #050505;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+
+			a {
+
+				color: #0080ff;
+			}
+
+		</style>
+	</head>
+	<body>
+
+		<div id="container"></div>
+		<div id="info"> WebGL/three.js - 3D natural environments <br />(wasd+arrows: movement, r/f: up/down, q/e: roll left/roll right)</div>
+		<script src="build/three_r69.js"></script>
+                <script src="build/rStats.js"></script>
+                <script src="build/rStats.extras.js"></script>
+                
+                <script src="ShaderLibrary.js"></script>
+                <script src="Terrain.js"></script>
+                <script src="DataManager.js"></script>
+                <script src="Lights.js"></script>
+                <script src="Skybox.js"></script>
+                <script src="Dike.js"></script>
+                <script src="Water.js"></script>
+                <script src="PlantModels.js"></script>
+                <script src="BillboardDistribution.js"></script>
+                <script src="CubeDistribution.js"></script>
+                <script src="PlantDistribution.js"></script>
+                <script src="js/controls/FlyControls.js"></script>
+                <script src="js/loaders/OBJMTLLoader.js"></script>
+                <script src="js/loaders/OBJLoader.js"></script>
+                <script src="js/loaders/MTLLoader.js"></script>
+                <script src="js/loaders/TGALoader.js"></script>
+                
+		<script src="js/postprocessing/EffectComposer.js"></script>
+		<script src="js/postprocessing/RenderPass.js"></script>
+		<script src="js/postprocessing/ShaderPass.js"></script>
+		<script src="js/postprocessing/MaskPass.js"></script>
+                <script src="js/shaders/BlendAdvancedShader.js"></script>
+                <script src="js/shaders/CopyShader.js"></script>
+
+		<script src="js/Detector.js"></script>
+		<script>
+
+			if ( ! Detector.webgl ) {
+
+				Detector.addGetWebGLMessage();
+				document.getElementById( 'container' ).innerHTML = "";
+
+			}
+			var container, stats, sceneObject, sceneBillboard, renderStats;
+
+			var camera, controls, renderer;
+                        
+                        var renderTargetObjects, renderTargetBillboards;
+
+			var worldWidth, worldDepth;
+
+			var clock = new THREE.Clock();
+                        var pNumber = 0;
+                                                
+                        var billboards, objects, terrains, terrainObjects, plantModels;
+
+                        var scale = 2;
+                        var images;
+                        var frustum = new THREE.Frustum();
+                        var billboardsVisible = true;
+                        var objectsVisible = false;
+                        var terrainsVisible = true;
+                        var linesLODVisible = false;
+                        var plantVisible = true;
+                        var waterVisible = true;
+                        var threshT = [];
+                        var threshT2 = [];
+                        var overlayStatus = false;
+                        var overlayFactor = 0.0;
+                        
+                        var plantTypes = ["Spartina", "Aster", "Salicornia"];
+                        var plantBillboardSizes = [1000,650,250];
+                        var nTextures = [4, 3, 1];
+                        
+                        var offsetFrustum;
+                        
+                        var children = [];
+                        var childrenNew = [];
+                        var offsetTransition = 1.0;
+                        
+                        var levelsLOD = 6;
+                        var levelLODselected = 0;
+                        var offsetLOD = .5;
+                        var locations;
+                        var terrainBoxes = [];
+                        var transitionLength = 1.0;
+                        
+                        var postprocessing = {};
+                        var BLENDING_MODE = true;
+                        
+                        var thresholdNear;
+                        var thresholdFar;
+                        var transitionZone = scale * 12.0;
+                        var dike;
+                        var speed = 0.5 * scale;
+                        var lookat = false;
+                        
+                        var fps = 10;
+                        var now;
+                        var then = Date.now();
+                        var interval = 1000/fps;
+                        var delta;
+                        
+                        var distT, bboxT, dist, frustT, distT2, objectRange, billboardRange;
+                        var objectBox = new THREE.Box2();
+                        var billboardBox = new THREE.Box2();
+                        var camPos = new THREE.Vector2(0.0,0.0);
+                        var maxDist;
+                        var maxDistBillboard;
+                        var transitionZoneBillboards = 35 * scale;
+                        var offsetLODTerrain = 0.3;
+                        var worldCoordinates;
+                        var nPlantTextures = 2.0;
+                        
+                        var quality = 0.0;
+                        var qualityMultiplier;
+                        var thresholdBillboard;
+                        var billboardSizeMultiplier;
+                        var heightScale;
+                        var plantModelSizes;
+                        var offsetDist;
+                        var resolution;
+                        if (quality === 0){ // HIGH Quality
+                            resolution = 1.0;
+                            qualityMultiplier = 1.0;
+                            billboardSizeMultiplier = 6;
+                            thresholdBillboard = 250 * scale;
+                            heightScale = 3;
+                            offsetDist = .3;
+                            plantModelSizes = [0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier,
+                                0.2*scale*qualityMultiplier,0.23*scale*qualityMultiplier,0.15*scale*qualityMultiplier,
+                                0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier];
+                        }
+                        else if(quality === 1){ //MEDIUM Quality
+                            resolution = 1.5;
+                            qualityMultiplier = 1.7;
+                            billboardSizeMultiplier = 6 * qualityMultiplier;
+                            thresholdBillboard = 125 * scale;
+                            heightScale = 4;
+                            offsetDist = .6;
+                            plantModelSizes = [0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier,
+                                0.2*scale*qualityMultiplier,0.23*scale*qualityMultiplier,0.15*scale*qualityMultiplier,
+                                0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier];
+                        }
+                        else if(quality === 2){ // LOW Quality
+                            resolution = 2.0;
+                            qualityMultiplier = 2.0;
+                            billboardSizeMultiplier = 6 * qualityMultiplier;
+                            thresholdBillboard = 100 * scale;
+                            heightScale = 4 * qualityMultiplier;
+                            offsetDist = .9;
+                            plantModelSizes = [0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier,
+                                0.2*scale*qualityMultiplier,0.23*scale*qualityMultiplier,0.15*scale*qualityMultiplier,
+                                0.3*scale*qualityMultiplier,0.3*scale*qualityMultiplier];
+                        }
+                        
+                        heightImageLink1 = "images/heightMap_Ecomodel.png";
+                        heightImageLink2 = "images/heightMap_Ecomodel_v2.png";
+
+                        mudImageLink = 'images/mudTilingColor.png';
+                        grassImageLink = 'images/grassTilingColor.png';
+
+                        mudNormalLink = 'images/mudNormals.png'
+                        skyBoxImagePath = 'images/skybox/';
+
+                        if(quality === 0.0){
+                            locationsTextLink = "data/locations_ecomodel.txt";
+                        }
+                        else if(quality === 1.0){
+                            locationsTextLink = "data/locations_08.txt";
+                        }
+                        else if(quality === 2.0){
+                            locationsTextLink = "data/locations_16.txt";
+                        }
+
+                        modelElymusObjLink = 'Models/Elymus.obj';
+                        modelElymusMtlLink = 'Models/Elymus.mtl';
+                        modelSpartinaObjLink = 'Models/Spartina.obj';
+                        modelSpartinaMtlLink = 'Models/Spartina.mtl';
+                        modelAtriplexObjLink = 'Models/Atriplex.obj';
+                        modelAtriplexMtlLink = 'Models/Atriplex.mtl';
+                        modelAsterObjLink = 'Models/Aster.obj';
+                        modelAsterMtlLink = 'Models/Aster.mtl';
+                        modelLimoniumObjLink = 'Models/Limonium.obj';
+                        modelLimoniumMtlLink = 'Models/Limonium.mtl';
+                        modelArtemisiaObjLink = 'Models/Artemisia.obj';
+                        modelArtemisiaMtlLink = 'Models/Artemisia.mtl';
+                        modelSalicorniaObjLink = 'Models/Salicornia.obj';
+                        modelSalicorniaMtlLink = 'Models/Salicornia.mtl';
+
+                        texturesElymusLink = 'Models/Textures/ElymusMap.png';
+                        texturesSpartinaLink = 'Models/Textures/SpartinaMap.png';
+                        texturesAtriplexLink = 'Models/Textures/AtriplexMap.png';
+                        texturesAsterLink = 'Models/Textures/AsterMap.png';
+                        texturesArtemisiaLink = 'Models/Textures/ArtemisiaMap.png';
+                        texturesLimoniumLink = 'Models/Textures/LimoniumMap.png';
+                        texturesSalicorniaLink = 'Models/Textures/SalicorniaMap.png';
+
+                        billboardsLink = "Billboards/cubeTextureAtlas.png";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_1024.tga";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_2048.tga";
+                        billboardTextureMapLink = "Billboards/Billboards_Mipmap_4096.tga";
+                        billboardTextureMapLink = "Billboards/Billboard_mipmap_ecomodel.tga";
+                        farawayTextureMapLink = "Billboards/Billboards_Mipmap_1024_background.tga";
+                        dikeModelObjLink = "Models/dijk.obj";
+                        dikeModelTextureLink = "Models/Textures/dykeTilingColor.png";
+                        waveNormalLink = "images/waternormals.jpg";
+                        
+                        var terrain;
+                                                
+                        preloadimages([heightImageLink1,heightImageLink2]).done(function(loadedImages){
+                            images = loadedImages;
+                            preLoadPlantModel([modelSpartinaObjLink,modelSpartinaMtlLink,modelAsterObjLink,modelAsterMtlLink,modelSalicorniaObjLink,modelSalicorniaMtlLink]).done(function(loadedModels){
+                                plantModels = loadedModels;
+                                preLoadLocations(locationsTextLink).done(function(loadedLocations){
+                                    locations = loadedLocations;
+                                    preLoadDike(dikeModelObjLink).done(function(loadedDike){
+                                        dike = loadedDike;
+                                        init();
+                                        animate();
+                                    });
+                                });
+                            });
+                        });
+
+			function init() {
+				container = document.getElementById( 'container' );
+                                
+                                camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, .06 * scale, scale * 680 );
+                                camera.position.y = scale*(heightScale+2);
+                                camera.position.x = 1 * scale;
+                                camera.position.z = 1 * scale;
+                                camera.rotation.x += 0;
+                                camera.rotation.y += 180;
+                                camera.rotation.z += 0;
+                                
+                                controls = new THREE.FlyControls( camera );
+
+				controls.movementSpeed = speed;
+				controls.domElement = container;
+				controls.rollSpeed = (Math.PI / 240) * (1 / scale);
+				controls.autoForward = false;
+				controls.dragToLook = true;
+				sceneObject = new THREE.Scene();
+                                sceneBillboard = new THREE.Scene();
+                                
+                                renderer = new THREE.WebGLRenderer({ antialias: true,logarithmicDepthBuffer: false });
+                                var windowWidth = window.innerWidth / resolution;
+                                var windowHeight = window.innerHeight / resolution;
+                                var pixelRatio = window.devicePixelRatio;
+                                renderer.setSize( windowWidth, windowHeight );        
+                                //renderer.setViewport( 0, 0, windowWidth*pixelRatio, windowHeight*pixelRatio );
+				container.appendChild( renderer.domElement );
+                                renderer.gammaInput = true;
+				renderer.gammaOutput = true;
+                                renderer.autoClear = false;
+                                renderer.shadowMapEnabled = true;
+				renderer.shadowMapType = THREE.PCFSoftShadowMap;
+
+                                var pixelWidth = Math.floor( windowWidth  / pixelRatio );
+                                var pixelHeight = Math.floor( windowHeight  / pixelRatio );
+                                var parameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, stencilBuffer: false };
+
+                                renderTargetObjects = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, parameters );
+                                renderTargetBillboards = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, parameters );
+                                renderTargetBlend = new THREE.WebGLRenderTarget( pixelWidth, pixelHeight, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat, stencilBuffer: false } );
+                                                               
+                                THREE.ImageUtils.crossOrigin = '';
+                                var mudTexture = THREE.ImageUtils.loadTexture(mudImageLink);
+                                mudTexture.wrapT = THREE.RepeatWrapping;
+                                mudTexture.wrapS = THREE.RepeatWrapping;
+                                mudTexture.repeat.set(1.0*scale,1.0*scale);
+                                var grassTexture = THREE.ImageUtils.loadTexture(grassImageLink);
+                                grassTexture.wrapT = THREE.RepeatWrapping;
+                                grassTexture.wrapS = THREE.RepeatWrapping;
+                                grassTexture.repeat.set(1*scale,1*scale);
+                                
+                                var dikeTexture = THREE.ImageUtils.loadTexture(dikeModelTextureLink);
+                                dikeTexture.wrapT = THREE.RepeatWrapping;
+                                dikeTexture.wrapS = THREE.RepeatWrapping;
+                                dikeTexture.repeat.set(1,1);
+                                
+                                var waveNormal = THREE.ImageUtils.loadTexture(waveNormalLink);
+                                waveNormal.wrapT = THREE.RepeatWrapping;
+                                waveNormal.wrapS = THREE.RepeatWrapping;
+                                waveNormal.repeat.set(1,1);
+                                
+                                var mudNormal = THREE.ImageUtils.loadTexture(mudNormalLink); 
+                                mudNormal.wrapT = THREE.RepeatWrapping;
+                                mudNormal.wrapS = THREE.RepeatWrapping;
+                                mudNormal.repeat.set(1,1);
+                                
+                                var tgaloader = new THREE.TGALoader();
+                                billboardTextureMap =  tgaloader.load( billboardTextureMapLink );
+                                farawayTextureMap = tgaloader.load(farawayTextureMapLink);
+                                
+                                var path = skyBoxImagePath;
+				var format = '.jpg';
+				var urls = [
+						path + 'px' + format, path + 'nx' + format,
+						path + 'py' + format, path + 'ny' + format,
+						path + 'pz' + format, path + 'nz' + format
+					];
+                                
+                                var skyboxTexture = THREE.ImageUtils.loadTextureCube( urls );
+				skyboxTexture.format = THREE.RGBFormat;
+                                skyboxTexture.mapping = THREE.CubeReflectionMapping;
+                                
+                                billboardTextures = THREE.ImageUtils.loadTexture( billboardsLink );
+                                
+                                var plantModelMaterials = [];
+
+                                plantModelMaterials[0] = THREE.ImageUtils.loadTexture( texturesSpartinaLink );
+                                plantModelMaterials[1] = THREE.ImageUtils.loadTexture( texturesAsterLink );
+                                plantModelMaterials[2] = THREE.ImageUtils.loadTexture( texturesSalicorniaLink );
+                                
+                                for(var t = 0; t < plantTypes.length; t++){
+                                    plantModelMaterials[t].magFilter = THREE.LinearFilter;
+                                    plantModelMaterials[t].minFilter = THREE.LinearFilter;
+                                }
+                                
+                                // LIGHTS
+                                lightsObject = new Lights(scale, camera.fov, "object");
+                                lightsBillboard = new Lights(scale, camera.fov, "billboard");
+                                sceneObject.add(lightsObject);
+                                sceneBillboard.add(lightsBillboard);
+                                
+                                // SKYBOX                                
+                                var skybox = new Skybox(scale, skyboxTexture);
+                                sceneBillboard.add(skybox);
+                                
+                                // WORLD INFORMATION
+                                var image = images[0];
+                                worldWidth = image.width;
+                                worldDepth = image.height; 
+                                
+                                var data = getHeight(image);
+                                var data2 = getHeight(images[1]);
+                                
+                                // Water
+                                waterObject = new Water(scale, worldWidth, worldDepth, heightScale, 0.2, lightsObject.hemiLight.position, waveNormal, skyboxTexture, "object");
+                                waterBillboard = new Water(scale, worldWidth, worldDepth, heightScale, 0.2, lightsObject.hemiLight.position, waveNormal, skyboxTexture, "billboard");
+                                sceneObject.add(waterObject);
+                                sceneBillboard.add(waterBillboard);                               
+                                
+                                // TERRAIN
+                                terrain = new Terrain(scale, worldWidth, worldDepth, heightScale, data, data2);
+                                                                
+                                // Calculate positions
+                                plantDistribution = new PlantDistribution(scale, worldWidth, worldDepth, plantTypes, levelsLOD, locations, terrain, plantModelSizes, plantBillboardSizes, billboardSizeMultiplier, offsetDist);
+                                
+                                for (var l = 0; l < levelsLOD; l++){
+                                    nWidth = Math.pow(2,l);
+                                    nDepth = Math.pow(2,l);
+                                    var tileSizeX = worldWidth / nWidth;
+                                    var tileSizeY = worldDepth / nDepth;
+
+                                    threshT[l] = Math.sqrt(tileSizeX*tileSizeX + tileSizeY*tileSizeY) * scale;
+                                    threshT2[l] = threshT[l] * 2.0;
+                                }
+                                thresholdNear = threshT[levelsLOD-1];
+                                
+                                terrain.generateLODStructure(levelsLOD, worldWidth,worldDepth, scale);
+                                terrain.generateMaterial(grassTexture, mudTexture, thresholdNear, offsetLOD, transitionZone, mudNormal, skyboxTexture, thresholdBillboard, transitionZoneBillboards, offsetLODTerrain, farawayTextureMap, overlayFactor);
+                                terrain.generateMeshesLOD(levelsLOD, scale);
+                                sceneObject.add(terrain.terrainNear);
+                                sceneObject.add(terrain.linesNear);
+                                sceneBillboard.add(terrain.terrainFar);
+                                sceneBillboard.add(terrain.linesFar);
+                                
+                                waterObject.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterObject.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                
+                                waterBillboard.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterBillboard.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                                                                                
+                                terrains = terrain.terrainFarLODs;
+                                linesLOD = terrain.linesLOD;
+                                terrainToObjectIDs = terrain.terrainToObjectIDs;
+                                terrainBoxes = terrain.terrainBoxes;
+                                terrainObjects = terrain.terrainNearLODs;
+                                
+                                var offsetX = terrains[levelsLOD-1][0].geometry.boundingBox.size().x;
+                                var offsetZ = terrains[levelsLOD-1][0].geometry.boundingBox.size().z;
+                                offsetFrustum =  -1 * (offsetX + offsetZ);
+                                
+                                console.log("merging");
+                                
+                                plantModelObjects = new PlantModels(plantDistribution, plantTypes, levelsLOD)
+                                plantModelObjects.generateMaterials(plantModelMaterials, thresholdNear, offsetLOD, transitionZone, plantTypes, nTextures);
+                                plantModelObjects.generateMeshes(plantTypes, levelsLOD, plantModels, plantDistribution);
+                                sceneObject.add(plantModelObjects);
+                                console.log("done merging");
+
+                                console.log("Billboard creation");
+                                                                
+                                // Billboards
+                                billboardDistribution = new BillboardDistribution(billboardTextureMap,thresholdNear,offsetLOD, transitionZone, thresholdBillboard, transitionZoneBillboards, overlayFactor, plantDistribution, levelsLOD,nPlantTextures);
+                                sceneBillboard.add(billboardDistribution);
+                                
+                                console.log("Billboard creation finished");
+                                
+                                console.log("Instance object creation");
+                                cubeDistribution = new CubeDistribution(plantDistribution, levelsLOD,thresholdNear,offsetLOD, transitionZone);
+                                sceneObject.add(cubeDistribution);                                
+                                console.log("Finished instance object generation");
+                                
+                                //Billboards processing
+                                var composerBillboards = new THREE.EffectComposer( renderer, renderTargetBillboards );
+                                
+                                var renderPassBillboards = new THREE.RenderPass( sceneBillboard, camera );
+                                var copyPassBillboards = new THREE.ShaderPass(THREE.CopyShader);
+
+                                renderPassBillboards.renderToScreen = false;
+                                
+				composerBillboards.addPass( renderPassBillboards );
+                                composerBillboards.addPass( copyPassBillboards );
+
+                                // Object processing
+                                var composerObjects = new THREE.EffectComposer( renderer, renderTargetObjects );
+                                var renderPassObjects = new THREE.RenderPass( sceneObject, camera );
+                                var copyPassObjects = new THREE.ShaderPass(THREE.CopyShader);
+                                
+                                renderPassObjects.renderToScreen = false;
+                                
+                                composerObjects.addPass( renderPassObjects );
+                                composerObjects.addPass( copyPassObjects );
+                                
+                                // Blending processing
+                                var composerBlending = new THREE.EffectComposer( renderer, renderTargetBlend );
+                                var blendPassObjects = new THREE.ShaderPass(THREE.BlendAdvancedShader);
+                                var copyPassBlend = new THREE.ShaderPass(THREE.CopyShader);
+                                copyPassBlend.renderToScreen = true;
+                                blendPassObjects.uniforms.tDiffuse1.value = composerObjects.renderTarget1;
+                                blendPassObjects.uniforms.tDiffuse2.value = composerBillboards.renderTarget1;
+                                
+                                composerBlending.addPass( blendPassObjects );
+                                composerBlending.addPass( copyPassBlend );
+
+				postprocessing.composerBillboards = composerBillboards;
+                                postprocessing.composerObjects = composerObjects;
+                                postprocessing.composerBlending = composerBlending;
+
+				document.addEventListener( 'keydown', onKeyDown, false );
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+                        
+                        function onKeyDown ( event ) {
+
+				switch( event.keyCode ) {
+
+//                                        case 80: /*P*/  billboardsVisibility(); break;
+//                                        case 79: /*O*/  objectsVisibility(); break;
+//                                        case 66: /*B*/  terrainsVisibility(); break;
+//                                        case 88: /*X*/  terrain.linesNear.visible = !terrain.linesNear.visible; terrain.linesFar.visible = !terrain.linesFar.visible; break;
+//                                        case 72: /*H*/  decreaseFarLOD(); break;
+//                                        case 76: /*L*/  increaseFarLOD(); break;
+//                                        case 89: /*Y*/  controls.rollSpeed += 0.0005; break;
+//                                        case 90: /*Z*/  overlayStatus = !overlayStatus; break;
+//                                        case 78: /*N*/  controls.rollSpeed -= 0.0005; break;
+//                                        case 71: /*G*/  controls.movementSpeed -= 0.025 * scale; break; 
+//                                        case 84: /*T*/  controls.movementSpeed += 0.025 * scale; break;
+//                                        case 73: /*I*/  increaseLOD(); break;
+//                                        case 74: /*J*/  decreaseLOD(); break;                                        
+//                                        case 75: /*K*/  waterVisible = !waterVisible; waterObject.visible = waterVisible; waterBillboard.visible = waterVisible; break;
+//                                        case 77: /*M*/  toggleShadow(); break; 
+//                                        case 85: /*U*/  controls.autoForward = !controls.autoForward; break;
+//                                        case 86: /*V*/  BLENDING_MODE = !BLENDING_MODE; break;
+//                                        case 67: /*C*/  plantModelObjects.visible = !plantModelObjects.visible; objectsVisible = false; plantVisibility(); break;
+
+				}
+
+			};
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+                                
+				renderer.setSize( window.innerWidth / resolution, window.innerHeight / resolution);
+                                //renderer.setViewport( 0, 0, (window.innerWidth / resolution)*window.devicePixelRatio, (window.innerHeight / resolution)*window.devicePixelRatio );
+                                
+//                                renderTargetObjects.setSize(window.innerWidth / resolution, window.innerHeight / resolution);
+//                                renderTargetBillboards.setSize(window.innerWidth / resolution, window.innerHeight / resolution);
+//                                renderTargetBlend.setSize(window.innerWidth / resolution, window.innerHeight / resolution);
+				//controls.handleResize();
+
+			}
+                        
+                        function toggleShadow(){
+                            for(var t = 0; t < plantTypes.length; t++){
+                                    for(var j = 0; j < plantModelObjects.plantModelBlocks[t].length; j++){
+                                        plantModelObjects.plantModelBlocks[t][j].castShadow = !plantModelObjects.plantModelBlocks[t][j].castShadow;
+                                    }
+                            }
+                        }
+                        
+                        function increaseLOD(){
+                            offsetLOD += .25;
+                            billboardDistribution.billboardMaterial.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            billboardDistribution.billboardMaterial.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            cubeDistribution.instancingMaterialReference.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            cubeDistribution.instancingMaterialReference.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            
+                            for(var t = 0; t <  plantTypes.length; t++){
+                                plantModelObjects.instancingMaterials[t].uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                plantModelObjects.instancingMaterials[t].uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            }
+                            
+                            terrain.materialNear.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            terrain.materialNear.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            terrain.materialFar.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            terrain.materialFar.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            
+                            waterObject.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            waterObject.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+
+                            waterBillboard.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                            waterBillboard.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                        }
+                        
+                        function decreaseLOD(){
+                            if (offsetLOD > 0){
+                                offsetLOD -= .25;
+                                billboardDistribution.billboardMaterial.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                billboardDistribution.billboardMaterial.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                cubeDistribution.instancingMaterialReference.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                cubeDistribution.instancingMaterialReference.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                
+                                for(var t = 0; t <  plantTypes.length; t++){
+                                    plantModelObjects.instancingMaterials[t].uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                    plantModelObjects.instancingMaterials[t].uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                }
+                                
+                                terrain.materialNear.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                terrain.materialNear.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                terrain.materialFar.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                terrain.materialFar.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                waterObject.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterObject.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                                
+                                waterBillboard.waterMesh.material.uniforms.threshNear.value = thresholdNear * offsetLOD;
+                                waterBillboard.waterMesh.material.uniforms.threshFar.value = thresholdNear * offsetLOD + transitionZone;
+                            }
+                        }
+                        
+                        function increaseFarLOD(){
+                            thresholdBillboard += 2 * scale;
+                            terrain.materialFar.uniforms.threshLODNear.value = thresholdBillboard - transitionZoneBillboards * offsetLODTerrain;
+                            terrain.materialFar.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards * offsetLODTerrain;
+                            
+                            billboardDistribution.billboardMaterial.uniforms.threshLODNear.value = thresholdBillboard;
+                            billboardDistribution.billboardMaterial.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards;
+                        }
+                        
+                        function decreaseFarLOD(){
+                            thresholdBillboard -= 2 * scale;
+                            terrain.materialFar.uniforms.threshLODNear.value = thresholdBillboard - transitionZoneBillboards * offsetLODTerrain;
+                            terrain.materialFar.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards * offsetLODTerrain;
+                            
+                            billboardDistribution.billboardMaterial.uniforms.threshLODNear.value = thresholdBillboard;
+                            billboardDistribution.billboardMaterial.uniforms.threshLODFar.value = thresholdBillboard + transitionZoneBillboards;
+                        }
+                        
+                        function distance(x1,y1,x2,y2){
+                            return Math.sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1));
+                        }
+                          
+                        function getHeight(img) {
+                                var canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                var context = canvas.getContext('2d');
+                                context.drawImage(img,0,0,img.width, img.height);
+                                var pix = context.getImageData(0,0, img.width, img.height).data;                                
+                                var size = img.width * img.height;
+                                var data = new Float32Array( size );
+
+                                var j=0;
+                                for (var i = 0; i<pix.length; i +=4) {
+                                    data[j++] = pix[i] / 255;
+                                }
+
+                                return data;
+                        }
+                        
+                        function preloadimages(arr){
+                            var newimages=[], loadedimages=0;
+                            var postaction=function(){};
+                            //var arr=(typeof arr!=="object")? [arr] : arr;
+                            function imageloadpost(){
+                                loadedimages++;
+                                if (loadedimages===arr.length){
+                                    postaction(newimages); //call postaction and pass in newimages array as parameter
+                                }
+                            }
+                            for (var i=0; i<arr.length; i++){
+                                newimages[i]=new Image();
+                                newimages[i].crossOrigin = '';
+                                newimages[i].onload=function(){
+                                    imageloadpost();
+                                };
+                                newimages[i].onerror=function(){
+                                    imageloadpost();
+                                };
+                                newimages[i].src=arr[i];
+                            }
+                            return { //return blank object with done() method
+                                done:function(f){
+                                    postaction=f || postaction; //remember user defined callback functions to be called when images load
+                                }
+                            };
+                        }
+                        
+                        function preLoadPlantModel(arr){
+                            var loadedModels=[];
+                            var loaded = 0;
+                            var postaction=function(){};
+                            function plantModelsloadpost(object, index){
+                                loadedModels[index] = object;
+                                loaded++;
+                                if((arr.length / 2) === loaded){
+                                    postaction(loadedModels); //call postaction and pass in newimages array as parameter\
+                                }
+                            }
+                            for(var i = 0; i < arr.length; i+=2){
+                                var loader = new THREE.OBJMTLLoader();
+                                loader.load( arr[i], arr[i+1], function ( object ) {
+                                    var texIndex = 1.0;
+                                    var plantModelGeometry = new THREE.BufferGeometry();
+                                    plantModelGeometry.addAttribute('position',new THREE.BufferAttribute(new Float32Array(0),3));
+                                    plantModelGeometry.addAttribute('normal',new THREE.BufferAttribute(new Float32Array(0),3));
+                                    plantModelGeometry.addAttribute('uv',new THREE.BufferAttribute(new Float32Array(0),2));
+                                    plantModelGeometry.addAttribute('textureIndex',new THREE.BufferAttribute(new Float32Array(0),1));
+                                    object.traverse( function ( child ) {
+                                        if(child.material instanceof THREE.MeshPhongMaterial){
+                                            //console.log(child.material.name);
+                                            child.geometry.computeVertexNormals();
+                                            child.geometry = new THREE.BufferGeometry().fromGeometry(child.geometry);
+
+                                            var texIndices = new Float32Array(child.geometry.attributes.position.length / 3);
+                                            for(var t = 0; t < texIndices.length; t++){
+                                                texIndices[t] = texIndex;
+                                            }
+                                            child.geometry.addAttribute('textureIndex',new THREE.BufferAttribute(texIndices,1));
+                                            plantModelGeometry.merge(child.geometry);
+
+                                            texIndex++; 
+                                        }
+                                    });
+                                    
+                                    var plantModel = new THREE.Mesh(plantModelGeometry);
+                                    plantModel.rotation.x = -Math.PI / 2;
+                                    plantModel.autoupdate = false;
+                                    plantModel.updateMatrix();
+                                    plantModel.frustumCulled = false;
+                                    plantModel.visible = false;
+                                    
+                                    var plantIndex = 0;
+                                    console.log(object.children[2].material.name);
+                                    for(var t = 0; t < plantTypes.length; t++){
+                                        if(object.children[2].material.name.indexOf(plantTypes[t]) >= 0){
+                                            plantIndex = t;
+                                            break;
+                                        }
+                                    }
+
+                                    plantModelsloadpost(plantModel, plantIndex);
+                                });
+                            }
+                            return { //return blank object with done() method
+                                done:function(f){
+                                    postaction=f || postaction; //remember user defined callback functions to be called when images load
+                                }
+                            };
+                        }
+                        
+                        function preLoadDike(dikeLink){
+                            var loadedDike;
+                            var postaction=function(){};
+                            function dikeloadpost(){
+                                postaction(loadedDike); //call postaction and pass in newimages array as parameter\
+                            }
+                            
+                            var loader = new THREE.OBJLoader();
+                            loader.load( dikeLink, function ( object ) {
+                                
+                                var material = new THREE.ShaderMaterial(ShaderLibrary["dykeShader"]);
+                                loadedDike = new THREE.Mesh(object.children[0].geometry, material);
+                                dikeloadpost();
+                            });
+                            return { //return blank object with done() method
+                                done:function(f){
+                                    postaction=f || postaction; //remember user defined callback functions to be called when images load
+                                }
+                            };
+                        }
+                        
+                        function preLoadLocations(textLink){
+                            var loadedLocations = [];
+                            var postaction=function(){};
+                            function locationsloadpost(){
+                                postaction(loadedLocations); //call postaction and pass in newimages array as parameter
+                            }
+                            
+                            var rawFile = new XMLHttpRequest();
+                            rawFile.open("GET", textLink);
+                            rawFile.onreadystatechange = function ()
+                            {
+                                if(rawFile.readyState === 4 && rawFile.status === 200)
+                                {
+                                    var allText = rawFile.responseText;
+                                    var textLocations = allText.split(/[\s\n]+/);
+
+                                    for (var i = 0; i < textLocations.length-1; i+=3){
+                                        loadedLocations[i + 0] = parseFloat(textLocations[i + 1]);
+                                        loadedLocations[i + 1] = parseFloat(textLocations[i + 0]);
+                                        loadedLocations[i + 2] = parseFloat(textLocations[i + 2]);
+                                    }
+
+                                    locationsloadpost();
+                                }
+                            };
+                            rawFile.send();
+                            
+                            return { //return blank object with done() method
+                                done:function(f){
+                                    postaction=f || postaction; //remember user defined callback functions to be called when images load
+                                }
+                            };
+                        }
+                        
+                        function plantVisibility(){
+                            if(plantModelObjects.visible){
+                                billboardDistribution.billboardMaterial.uniforms.billboardTextureAtlas.value = billboardTextureMap;
+                            }
+                        }
+                        
+                        function billboardsVisibility(){
+                            billboardsVisible = !billboardsVisible;
+                        }
+                        
+                        function objectsVisibility(){
+                           objectsVisible = !objectsVisible;
+                           plantModelObjects.visible = false;
+                           
+                           if(objectsVisible){
+                                billboardDistribution.billboardMaterial.uniforms.billboardTextureAtlas.value = billboardTextures;
+                           }
+                        }
+                        
+                        function terrainsVisibility(){
+                            terrain.terrainNear.visible = !terrain.terrainNear.visible;
+                            terrain.terrainFar.visible = !terrain.terrainFar.visible;
+                        }
+                        
+                        function linesLODVisibility(){
+                            linesLODVisible = !linesLODVisible;
+                        }
+                        
+			function animate() {
+//                                setTimeout( function() {
+                                requestAnimationFrame( animate );
+//                                }, 1000 / 30 );
+                                controls.update( 1 );
+                                render();
+			}
+
+			function render() {
+                                if(overlayStatus && overlayFactor < 0.2){
+                                    overlayFactor += 0.005;
+                                    billboardDistribution.billboardMaterial.uniforms.overlayFactor.value = overlayFactor * 2;
+                                    terrain.materialFar.uniforms.overlayFactor.value = overlayFactor;
+                                }
+                                else if(!overlayStatus && overlayFactor > 0.0){
+                                    overlayFactor -= 0.005;
+                                    billboardDistribution.billboardMaterial.uniforms.overlayFactor.value = overlayFactor * 2;
+                                    terrain.materialFar.uniforms.overlayFactor.value = overlayFactor;
+                                }
+                                
+                                worldCoordinates = new THREE.Vector3();
+                                worldCoordinates.setFromMatrixPosition( this.camera.matrixWorld );
+                                waterObject.waterMesh.material.uniforms.eye.value = worldCoordinates;
+                                waterBillboard.waterMesh.material.uniforms.eye.value = worldCoordinates;
+
+                                frustum.setFromMatrix( new THREE.Matrix4().multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse ) );
+                                
+                                children = [];
+                                childrenNew = [];
+                                if(lookat){
+                                    camera.lookAt(new THREE.Vector3(0,0,0));
+                                }
+                                camPos.x = camera.position.x;
+                                camPos.y = camera.position.z;
+                                maxDist = (thresholdNear * offsetLOD + transitionZone) * 2;
+                                maxDistBillboard = (thresholdBillboard + transitionZoneBillboards) * 2;
+                                objectBox.setFromCenterAndSize(camPos, new THREE.Vector2(maxDist,maxDist));
+                                billboardBox.setFromCenterAndSize(camPos, new THREE.Vector2(maxDistBillboard,maxDistBillboard));
+                                children[0] = true;
+                                
+                                lightsObject.update(camera.position);
+                                
+                                for (var l = 0; l < levelsLOD; l++){
+                                    if(l < levelsLOD-1){
+                                        childrenNew = [];
+                                        for (var i = 0; i < terrains[l].length; i++){
+                                            if( children[i] ) {
+                                                objectRange = objectBox.isIntersectionBox(terrainBoxes[l][i]);
+                                                billboardRange = billboardBox.isIntersectionBox(terrainBoxes[l][i]);
+                                                bboxT = terrains[l][i].geometry.boundingBox;
+                                                frustT = frustum.containsBox( bboxT, offsetFrustum );
+                                                if (frustT === 0 && !objectRange && !billboardRange){
+                                                    terrains[l][i].visible = true;
+                                                    linesLOD[l][i].visible = linesLODVisible && true;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && false;
+                                                    childrenNew[i*4 + 0] = false;
+                                                    childrenNew[i*4 + 1] = false;
+                                                    childrenNew[i*4 + 2] = false;
+                                                    childrenNew[i*4 + 3] = false;
+                                                }
+                                                else if (frustT === 0 && !objectRange && billboardRange){
+                                                    terrains[l][i].visible = true;
+                                                    linesLOD[l][i].visible = linesLODVisible && true;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
+                                                    childrenNew[i*4 + 0] = false;
+                                                    childrenNew[i*4 + 1] = false;
+                                                    childrenNew[i*4 + 2] = false;
+                                                    childrenNew[i*4 + 3] = false;
+                                                }
+                                                else if(frustT === 6){
+                                                    terrains[l][i].visible = false;
+                                                    linesLOD[l][i].visible = false;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                    childrenNew[i*4 + 0] = false;
+                                                    childrenNew[i*4 + 1] = false;
+                                                    childrenNew[i*4 + 2] = false;
+                                                    childrenNew[i*4 + 3] = false;
+                                                }
+                                                else if(frustT > 0 || !distT){
+                                                    terrains[l][i].visible = false;
+                                                    linesLOD[l][i].visible = false;
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                    childrenNew[i*4 + 0] = true;
+                                                    childrenNew[i*4 + 1] = true;
+                                                    childrenNew[i*4 + 2] = true;
+                                                    childrenNew[i*4 + 3] = true;
+                                                }
+                                            }
+                                            else{
+                                                terrains[l][i].visible = false;
+                                                linesLOD[l][i].visible = false;
+                                                billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                childrenNew[i*4 + 0] = false;
+                                                childrenNew[i*4 + 1] = false;
+                                                childrenNew[i*4 + 2] = false;
+                                                childrenNew[i*4 + 3] = false;
+                                            }
+                                        }
+                                        children = childrenNew;
+                                    }
+                                    else{
+                                        for (var i = 0; i < terrains[l].length; i++){
+                                            if(children[i]){
+                                                frustT = frustum.intersectsObject( terrains[l][i] );
+                                                objectRange = objectBox.isIntersectionBox(terrainBoxes[l][i]);
+                                                dist = terrainBoxes[l][i].distanceToPoint(camPos) < maxDist;
+
+                                                if(frustT && objectRange && dist){
+                                                    terrains[l][i].visible = true;
+                                                    terrainObjects[levelsLOD-1][i].visible = true;
+                                                    linesLOD[l][i].visible = linesLODVisible && true;
+                                                    cubeDistribution.objects[terrainToObjectIDs[l][i]].visible = objectsVisible && true;
+                                                    for(var t = 0; t < plantTypes.length; t++){
+                                                        plantModelObjects.plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = true;
+                                                    }
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
+                                                }
+                                                else if(frustT){
+                                                    terrains[l][i].visible = true;
+                                                    linesLOD[l][i].visible = linesLODVisible && true;
+                                                    terrainObjects[levelsLOD-1][i].visible = false;
+                                                    cubeDistribution.objects[terrainToObjectIDs[l][i]].visible = false;
+                                                    for(var t = 0; t < plantTypes.length; t++){
+                                                        plantModelObjects.plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
+                                                    }
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = billboardsVisible && true;
+                                                }
+                                                else{
+                                                    terrains[l][i].visible = false;
+                                                    linesLOD[l][i].visible = false;
+                                                    terrainObjects[levelsLOD-1][i].visible = false;
+                                                    cubeDistribution.objects[terrainToObjectIDs[l][i]].visible = false;
+                                                    for(var t = 0; t < plantTypes.length; t++){
+                                                        plantModelObjects.plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
+                                                    }
+                                                    billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                                }
+                                            }
+                                            else{
+                                                terrains[l][i].visible = false;
+                                                linesLOD[l][i].visible = false;
+                                                terrainObjects[levelsLOD-1][i].visible = false;
+                                                cubeDistribution.objects[terrainToObjectIDs[l][i]].visible = false;
+                                                for(var t = 0; t < plantTypes.length; t++){
+                                                    plantModelObjects.plantModelBlocks[t][terrainToObjectIDs[l][i]].visible = false;
+                                                }
+                                                billboardDistribution.billboards[l][terrainToObjectIDs[l][i]].visible = false;
+                                            }
+                                        }
+                                    }
+                                }
+                                renderer.clear();
+                                if (BLENDING_MODE){
+                                    postprocessing.composerBillboards.render( 0.1 );
+                                    postprocessing.composerObjects.render( 0.1 );
+                                    postprocessing.composerBlending.render ( 0.1 );
+                                }
+                                else{
+                                    renderer.render( sceneBillboard, camera);
+				    renderer.render( sceneObject, camera );
+                                }                                                                
+			}
+
+		</script>
+
+	</body>
+</html>
