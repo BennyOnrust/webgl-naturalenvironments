@@ -25,7 +25,7 @@ PlantDistribution = function(worldScale, worldWidth, worldDepth, plantTypes, lev
     this.plantScales = [];
     this.plantColorVariations = [];
     this.plantRotations = [];
-    
+    console.log(locations.length);
     for(var i = 0; i < locations.length-1; i+=3){
         var xpos = locations[i];
         var zpos = locations[i+1];

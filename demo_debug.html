@@ -89,7 +89,7 @@
                         var billboardsVisible = true;
                         var objectsVisible = false;
                         var terrainsVisible = true;
-                        var linesLODVisible = true;
+                        var linesLODVisible = false;
                         var plantVisible = true;
                         var waterVisible = true;
                         var threshT = [];
@@ -515,7 +515,7 @@
                                         case 80: /*P*/  billboardsVisibility(); break;
                                         case 79: /*O*/  objectsVisibility(); break;
                                         case 66: /*B*/  terrainsVisibility(); break;
-                                        case 88: /*X*/  lookat = !lookat; break;
+                                        case 88: /*X*/  terrain.linesNear.visible = !terrain.linesNear.visible; terrain.linesFar.visible = !terrain.linesFar.visible; break;
                                         case 72: /*H*/  decreaseFarLOD(); break;
                                         case 76: /*L*/  increaseFarLOD(); break;
                                         case 89: /*Y*/  controls.rollSpeed += 0.0005; break;

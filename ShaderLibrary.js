@@ -599,7 +599,7 @@ ShaderLibrary = {
                 "       float visible2 = ceil(1.0-transitionLOD-0.01);",
                 "       float visible = sign(transition) * visible2;",
                 "       vColorInstance.w = 1.0 - transitionLOD;",
-                "	gl_PointSize = (size / (length( mvPosition.xz) * 1.0));",
+                "	gl_PointSize = (size / (length( mvPosition.xyz) * 1.0));",
                 
                 "       mvPosition = mvPosition * vec4(1.0, 1.0, 1.0, visible);",
 
